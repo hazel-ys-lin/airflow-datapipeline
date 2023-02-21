@@ -7,9 +7,9 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.S3_hook import S3Hook
 from psqltos3_operator import psqlToS3Operator
 from psqltos3_operator import psqlGetTablesOperator
+from psqltos3_operator import downloadFromS3Operator
 
 
 def downloadFromS3(s3_conn_id: str, s3_key: str, s3_bucket: str, local_path: str):
@@ -56,16 +56,11 @@ with DAG(
         s3_key="table_names.csv",
     )
 
-    tables_from_s3 = PythonOperator(
-        task_id="load_table_names_from_s3",
-        python_callable=downloadFromS3,
-        op_kwargs={
-            "s3_conn_id": "aws_conn_id",
-            "s3_key": "table_names.csv",
-            "s3_bucket": "uvs-data-processing-bucket",
-            "local_path": "/home/airflow/airflow/data/"
-        },
-    )
+    tables_from_s3 = downloadFromS3Operator(task_id="load_table_names_from_s3",
+                                            s3_conn_id="aws_s3_conn",
+                                            s3_bucket="uvs-data-processing-bucket",
+                                            s3_key="table_names.csv",
+                                            local_path="/home/airflow/airflow/data/")
 
     export_task = psqlToS3Operator(
         task_id="psqltos3",
