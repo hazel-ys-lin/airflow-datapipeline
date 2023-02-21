@@ -41,6 +41,6 @@ class psqlToS3Operator(BaseOperator):
         s3_hook.load_file_obj(
             file_obj=data_buffer_binary,
             bucket_name=self.s3_bucket,
-            key=self._s3_key,
+            key=self.s3_key,
             replace=True,
         )
