@@ -30,6 +30,7 @@ with DAG(
     get_tables_task = psqlGetTablesOperator(
         task_id="get_psql_tables",
         postgres_conn_id="uvs_postgres_conn",
+        s3_conn_id="aws_s3_conn",
         sql_query=
         "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';",
         s3_bucket="uvs-data-processing-bucket",
