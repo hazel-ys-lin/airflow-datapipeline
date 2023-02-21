@@ -58,7 +58,7 @@ with DAG(
 
     tables_from_s3 = PythonOperator(
         task_id="load_table_names_from_s3",
-        python_callable='downloadFromS3',
+        python_callable=downloadFromS3,
         op_kwargs={
             "s3_key": "table_names.csv",
             "s3_bucket": "uvs-data-processing-bucket",
