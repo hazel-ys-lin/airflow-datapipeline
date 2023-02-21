@@ -8,6 +8,7 @@ import io
 import os
 
 from airflow.models import BaseOperator
+from airflow.operators.python_operator import PythonOperator
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
@@ -66,6 +67,10 @@ class psqlToS3Operator(BaseOperator):
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
+
+        # TODO: load csv in S3 to get all the table names
+
+        # TODO: enumerate all the tables, put table names into sql query
 
         results = postgres_hook.get_records(self.sql_query)
 
