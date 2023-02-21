@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-import psqltos3_operator
+from psqltos3_operator import psqlToS3Operator
 
 with DAG(
         "psqlToS3",
