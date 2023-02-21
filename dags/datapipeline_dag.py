@@ -24,7 +24,7 @@ def downloadFromS3(s3_conn_id: str, s3_bucket: str, s3_key: str, local_path: str
     Returns:
         _type_: _description_
     """
-    s3_hook = S3Hook(aws_conn_id=s3_conn_id)
+    s3_hook = S3Hook("aws_s3_conn")
     file_name = s3_hook.download_file(s3_key=s3_key, s3_bucket=s3_bucket, local_path=local_path)
     return file_name
 
