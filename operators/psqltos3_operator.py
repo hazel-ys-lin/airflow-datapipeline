@@ -36,8 +36,8 @@ class psqlToS3Operator(BaseOperator):
         # self.s3_key = s3_key
 
     def execute(self, context):
-        postgres_hook = PostgresHook(postgres_conn_id=self._postgres_conn_id)
-        s3_hook = S3Hook(aws_conn_id=self._s3_conn_id)
+        postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
+        s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
 
         results = postgres_hook.get_records(self.sql_query)
 
@@ -47,7 +47,7 @@ class psqlToS3Operator(BaseOperator):
         data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
         s3_hook.load_file_obj(
             file_obj=data_buffer_binary,
-            bucket_name=self._s3_bucket,
+            bucket_name=self.s3_bucket,
             # key=self._s3_key,
             replace=True,
         )
