@@ -32,5 +32,5 @@ with DAG(
         s3_conn_id="aws_s3_conn",
         sql_query="SELECT * FROM user_org;",
         s3_bucket="uvs-data-processing-bucket",
-        s3_key="",
+        s3_key="/",
     )
