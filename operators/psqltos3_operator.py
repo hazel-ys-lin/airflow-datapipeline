@@ -27,12 +27,13 @@ class psqlGetTablesOperator(BaseOperator):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
         results = postgres_hook.get_records(self.sql_query)
 
-        data_buffer = io.StringIO()
-        print('data_buffer type: ', type(data_buffer), data_buffer)
+        # data_buffer = io.StringIO()
+        # print('data_buffer type: ', type(data_buffer), data_buffer)
         print('results type: ', type(results), results)
+        print('result items type: ', type(results[0]), results[0])
 
-        data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
-        print('data_buffer_binary type: ', type(data_buffer_binary), data_buffer_binary)
+        # data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
+        # print('data_buffer_binary type: ', type(data_buffer_binary), data_buffer_binary)
 
 
 class psqlToS3Operator(BaseOperator):
