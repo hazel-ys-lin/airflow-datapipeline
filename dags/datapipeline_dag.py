@@ -24,7 +24,7 @@ def downloadFromS3(s3_conn_id: str, s3_bucket: str, s3_key: str, local_path: str
     Returns:
         _type_: _description_
     """
-    s3_hook = S3Hook("aws_s3_conn")
+    s3_hook = S3Hook(aws_conn_id=s3_conn_id)
     file_name = s3_hook.download_file(s3_key=s3_key, s3_bucket=s3_bucket, local_path=local_path)
     return file_name
 
@@ -60,6 +60,7 @@ with DAG(
         task_id="load_table_names_from_s3",
         python_callable=downloadFromS3,
         op_kwargs={
+            "s3_conn_id": "aws_conn_id",
             "s3_key": "table_names.csv",
             "s3_bucket": "uvs-data-processing-bucket",
             "local_path": "/home/airflow/airflow/data/"
