@@ -25,7 +25,7 @@ class psqlGetTablesOperator(BaseOperator):
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
-        results = postgres_hook.get_recodes(self.sql_query)
+        results = postgres_hook.get_records(self.sql_query)
 
         data_buffer = io.StringIO()
         print('data_buffer type: ', type(data_buffer), data_buffer)
