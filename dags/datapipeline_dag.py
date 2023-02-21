@@ -32,6 +32,8 @@ with DAG(
         postgres_conn_id="uvs_postgres_conn",
         sql_query=
         "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';",
+        s3_bucket="uvs-data-processing-bucket",
+        s3_key="table_names.csv",
     )
 
     export_task = psqlToS3Operator(
@@ -40,7 +42,7 @@ with DAG(
         s3_conn_id="aws_s3_conn",
         sql_query="SELECT * FROM user_org;",
         s3_bucket="uvs-data-processing-bucket",
-        s3_key="user_org.csv",
+        s3_key="table-csv/user_org.csv",
     )
 
 get_tables_task >> export_task
