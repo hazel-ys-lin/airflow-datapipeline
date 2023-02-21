@@ -8,6 +8,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from psqltos3_operator import psqlToS3Operator
+from psqltos3_operator import psqlGetTablesOperator
 
 with DAG(
         "psqlToS3",
@@ -26,6 +27,13 @@ with DAG(
         catchup=False,
         tags=["dataPipeline"],
 ) as dag:
+    get_tables_task = psqlGetTablesOperator(
+        task_id="get_psql_tables",
+        postgres_conn_id="uvs_postgres_conn",
+        sql_query=
+        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';",
+    )
+
     export_task = psqlToS3Operator(
         task_id="psqltos3",
         postgres_conn_id="uvs_postgres_conn",
@@ -34,3 +42,5 @@ with DAG(
         s3_bucket="uvs-data-processing-bucket",
         s3_key="user_org.csv",
     )
+
+get_tables_task >> export_task
