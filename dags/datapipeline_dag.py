@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-from psqltos3_operator import psqlToS3Operator
+import psqltos3_operator
 
 with DAG(
         "psqlToS3",
@@ -29,8 +29,8 @@ with DAG(
     export_task = psqlToS3Operator(
         task_id="psqltos3",
         postgres_conn_id="uvs_postgres_conn",
-        s3_conn_id="",
+        s3_conn_id="aws_s3_conn",
         sql_query="SELECT * FROM user_org;",
-        s3_bucket="",
-        s3_key="",
+        s3_bucket="uvs-data-processing-bucket",
+        # s3_key="",
     )

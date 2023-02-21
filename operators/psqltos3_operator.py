@@ -19,14 +19,21 @@ class psqlToS3Operator(BaseOperator):
     """
 
     @apply_defaults
-    def __init__(self, postgres_conn_id: str, s3_conn_id: str, sql_query: str, s3_bucket: str,
-                 s3_key: str, *args, **kwargs) -> None:
+    def __init__(
+            self,
+            postgres_conn_id: str,
+            s3_conn_id: str,
+            sql_query: str,
+            s3_bucket: str,
+            #  s3_key: str,
+            *args,
+            **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.s3_conn_id = s3_conn_id
         self.sql_query = sql_query
         self.s3_bucket = s3_bucket
-        self.s3_key = s3_key
+        # self.s3_key = s3_key
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self._postgres_conn_id)
@@ -41,6 +48,6 @@ class psqlToS3Operator(BaseOperator):
         s3_hook.load_file_obj(
             file_obj=data_buffer_binary,
             bucket_name=self._s3_bucket,
-            key=self._s3_key,
+            # key=self._s3_key,
             replace=True,
         )
