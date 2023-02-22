@@ -97,9 +97,10 @@ class psqlToS3Operator(BaseOperator):
                 table_list.append(line)
 
         # enumerate all the tables, put table names into sql query
-        for i in enumerate(table_list):
-            sql_query = f"SELECT * FROM {table_list[i]}"
-            s3_key = f"table-csv/{table_list[i].csv}"
+        for i, table in enumerate(table_list):
+            table = table.replace(' ', '')
+            sql_query = f"SELECT * FROM '{table}';"
+            s3_key = f"table-csv/{table}.csv"
             results = postgres_hook.get_records(sql_query)
 
             data_buffer = io.StringIO()
