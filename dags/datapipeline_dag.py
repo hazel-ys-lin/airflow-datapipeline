@@ -3,6 +3,7 @@
     processing data
 """
 
+import os
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
@@ -12,21 +13,10 @@ from psqltos3_operator import psqlGetTablesOperator
 from psqltos3_operator import downloadFromS3Operator
 
 
-def downloadFromS3(s3_conn_id: str, s3_key: str, s3_bucket: str, local_path: str):
-    """_summary_
-
-    Args:
-        s3_conn_id (str): _description_
-        s3_bucket (str): _description_
-        s3_key (str): _description_
-        local_path (str): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    s3_hook = S3Hook(aws_conn_id=s3_conn_id)
-    file_name = s3_hook.download_file(key=s3_key, bucket_name=s3_bucket, local_path=local_path)
-    return file_name
+def rename_file(ti, new_name: str) -> None:
+    download_file_name = ti.xcom_pull(task_ids=['load_table_names_from_s3'])
+    download_file_path = '/'.join(download_file_name[0].split('/')[:-1])
+    os.rename(src=download_file_name[0], dst=f"{download_file_path}/{new_name}")
 
 
 with DAG(
@@ -56,11 +46,17 @@ with DAG(
         s3_key="table_names.csv",
     )
 
-    tables_from_s3 = downloadFromS3Operator(task_id="load_table_names_from_s3",
-                                            s3_conn_id="aws_s3_conn",
-                                            s3_bucket="uvs-data-processing-bucket",
-                                            s3_key="table_names.csv",
-                                            local_path="/home/airflow/airflow/data/")
+    tables_from_s3 = downloadFromS3Operator(
+        task_id="load_table_names_from_s3",
+        s3_conn_id="aws_s3_conn",
+        s3_bucket="uvs-data-processing-bucket",
+        s3_key="table_names.csv",
+        local_path="/home/airflow/airflow/data/",
+    )
+
+    rename_table_from_s3 = PythonOperator(task_id="rename_file_from_s3",
+                                          python_callable=rename_file,
+                                          op_kwargs={'new_name': 'table_names.csv'})
 
     export_task = psqlToS3Operator(
         task_id="psqltos3",
@@ -71,4 +67,4 @@ with DAG(
         s3_key="table-csv/user_org.csv",
     )
 
-get_tables_task >> tables_from_s3 >> export_task
+get_tables_task >> tables_from_s3 >> rename_table_from_s3 >> export_task
