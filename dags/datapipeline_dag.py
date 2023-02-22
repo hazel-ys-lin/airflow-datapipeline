@@ -63,9 +63,9 @@ with DAG(
         task_id="psqltos3",
         postgres_conn_id="uvs_postgres_conn",
         s3_conn_id="aws_s3_conn",
-        sql_query="SELECT * FROM user_org;",
+        # sql_query="SELECT * FROM user_org;",
         s3_bucket="uvs-data-processing-bucket",
-        s3_key="table-csv/user_org.csv",
+        # s3_key="table-csv/user_org.csv",
         sla=timedelta(seconds=5)  # Set up timeout length
     )
 

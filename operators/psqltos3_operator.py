@@ -78,32 +78,46 @@ class psqlToS3Operator(BaseOperator):
     """
 
     @apply_defaults
-    def __init__(self, postgres_conn_id: str, s3_conn_id: str, sql_query: str, s3_bucket: str,
-                 s3_key: str, *args, **kwargs) -> None:
+    def __init__(
+            self,
+            postgres_conn_id: str,
+            s3_conn_id: str,
+            #  sql_query: str,
+            s3_bucket: str,
+            #  s3_key: str,
+            *args,
+            **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.s3_conn_id = s3_conn_id
-        self.sql_query = sql_query
+        # self.sql_query = sql_query
         self.s3_bucket = s3_bucket
-        self.s3_key = s3_key
+        # self.s3_key = s3_key
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
 
-        # TODO: load csv in S3 to get all the table names
+        # load csv in S3 to get all the table names
+        table_file = '/home/airflow/airflow/data/table_names.txt'
+        table_list = []
+        with open(table_file, 'r', encoding='UTF-8') as file:
+            while (line := file.readline().rstrip()):
+                table_list.append(line)
 
-        # TODO: enumerate all the tables, put table names into sql query
+        # enumerate all the tables, put table names into sql query
+        for i in enumerate(table_list):
+            sql_query = f"SELECT * FROM {table_list[i]}"
+            s3_key = f"table-csv/{table_list[i].csv}"
+            results = postgres_hook.get_records(sql_query)
 
-        results = postgres_hook.get_records(self.sql_query)
-
-        data_buffer = io.StringIO()
-        csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
-        csv_writer.writerows(results)
-        data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
-        s3_hook.load_file_obj(
-            file_obj=data_buffer_binary,
-            bucket_name=self.s3_bucket,
-            key=self.s3_key,
-            replace=True,
-        )
+            data_buffer = io.StringIO()
+            csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
+            csv_writer.writerows(results)
+            data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
+            s3_hook.load_file_obj(
+                file_obj=data_buffer_binary,
+                bucket_name=self.s3_bucket,
+                key=s3_key,
+                replace=True,
+            )

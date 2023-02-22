@@ -213,4 +213,7 @@ ENV/
 
 # End of https://www.gitignore.io/api/macos,linux,django,python,pycharm
 
+
+# ------- local debug files-------
 debug_test.py
+table_names.txt
