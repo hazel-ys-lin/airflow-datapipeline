@@ -130,7 +130,7 @@ class psqlToS3Operator(BaseOperator):
 
             # ------ This part convert pandas dataframe into parquet ------
             s3_key = f"table-parquet/{table}.parquet"
-            aws_s3_hook = AwsBaseHook(aws_conn_id="self.s3_conn_id")
+            aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
             # ----- This part upload parquet to s3 bucket
             wr.s3.to_parquet(df=results,
