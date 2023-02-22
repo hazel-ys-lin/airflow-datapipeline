@@ -7,8 +7,9 @@ import csv
 import io
 import os
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
+import awswrangler as wr
 import fastparquet
 
 from airflow.models import BaseOperator
@@ -16,6 +17,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
+from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
 
 
 class psqlGetTablesOperator(BaseOperator):
@@ -82,18 +84,17 @@ class psqlToS3Operator(BaseOperator):
     """
 
     @apply_defaults
-    def __init__(self, postgres_conn_id: str, s3_conn_id: str, s3_bucket: str, *args,
-                 **kwargs) -> None:
+    def __init__(self, postgres_conn_id: str, s3_conn_id: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.s3_conn_id = s3_conn_id
-        self.s3_bucket = s3_bucket
+        # self.s3_bucket = s3_bucket
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
-        s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
+        # s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
 
-        # load csv in S3 to get all the table names
+        # load table_names file to get all the table names
         table_file = '/home/airflow/airflow/data/table_names.txt'
         table_list = []
         with open(table_file, 'r', encoding='UTF-8') as file:
@@ -104,20 +105,33 @@ class psqlToS3Operator(BaseOperator):
         for i, table in enumerate(table_list):
             table = table.replace(' ', '')
             sql_query = f"SELECT * FROM {table};"
-            s3_key = f"table-csv/{table}.parquet"
-            results = postgres_hook.get_records(sql_query)
 
-            data_buffer = io.StringIO()
-            csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
-            csv_writer.writerows(results)
+            # ------ This part get tables from postgres as csv ------
+            # s3_key = f"table-csv/{table}.csv"
+            # results = postgres_hook.get_records(sql_query)
 
-            # Covert csv to parquet
-            parquet_file = csv_writer.to_parquet(f"{table}.parquet")
+            # data_buffer = io.StringIO()
+            # csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
+            # csv_writer.writerows(results)
+            # data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
 
-            data_buffer_binary = io.BytesIO(parquet_file.getvalue().encode())
-            s3_hook.load_file_obj(
-                file_obj=data_buffer_binary,
-                bucket_name=self.s3_bucket,
-                key=s3_key,
-                replace=True,
-            )
+            # s3_hook.load_file_obj(
+            #     file_obj=data_buffer_binary,
+            #     bucket_name=self.s3_bucket,
+            #     key=s3_key,
+            #     replace=True,
+            # )
+
+            # ------ This part get tables from postgres as
+            #        pandas dataframe (for converting purpose) -----
+            s3_key = f"table-parquet/{table}.parquet"
+            results = postgres_hook.get_pandas_df(sql_query)
+
+            # ------ This part convert pandas dataframe into parquet ------
+            s3_key = f"table-parquet/{table}.parquet"
+            aws_s3_hook = AwsBaseHook(aws_conn_id="self.s3_conn_id")
+
+            # ----- This part upload parquet to s3 bucket
+            wr.s3.to_parquet(df=results,
+                             path=f"s3://{self.s3_bucket}/{s3_key}",
+                             boto3_session=aws_s3_hook.get_session())
