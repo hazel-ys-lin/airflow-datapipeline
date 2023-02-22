@@ -31,7 +31,8 @@ with DAG(
         },
         description="PostgresQL to S3",
         # scehdule=timedelta(days=1),
-        schedule_interval='@daily',
+        # schedule_interval='@daily',
+        schedule_interval=None,
         start_date=datetime(2023, 2, 21),
         catchup=False,
         tags=["dataPipeline"],
@@ -56,7 +57,7 @@ with DAG(
 
     rename_table_from_s3 = PythonOperator(task_id="rename_file_from_s3",
                                           python_callable=rename_file,
-                                          op_kwargs={'new_name': 'table_names.csv'})
+                                          op_kwargs={'new_name': 'table_names.txt'})
 
     export_task = psqlToS3Operator(
         task_id="psqltos3",
