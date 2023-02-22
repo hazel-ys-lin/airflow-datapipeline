@@ -63,6 +63,7 @@ with DAG(
         task_id="psqltos3",
         postgres_conn_id="uvs_postgres_conn",
         s3_conn_id="aws_s3_conn",
+        s3_bucket="uvs-data-processing-bucket",
         sla=timedelta(seconds=5)  # Set up timeout length
     )
 

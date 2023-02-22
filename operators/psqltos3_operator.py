@@ -84,7 +84,8 @@ class psqlToS3Operator(BaseOperator):
     """
 
     @apply_defaults
-    def __init__(self, postgres_conn_id: str, s3_conn_id: str, *args, **kwargs) -> None:
+    def __init__(self, postgres_conn_id: str, s3_conn_id: str, s3_bucket: str, *args,
+                 **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.s3_conn_id = s3_conn_id
