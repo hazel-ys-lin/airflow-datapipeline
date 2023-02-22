@@ -7,10 +7,7 @@ import csv
 import io
 import os
 
-import numpy as np
-import pandas as pd
 import awswrangler as wr
-import fastparquet
 
 from airflow.models import BaseOperator
 from airflow.operators.python_operator import PythonOperator
