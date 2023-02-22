@@ -89,7 +89,7 @@ class psqlToS3Operator(BaseOperator):
         super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.s3_conn_id = s3_conn_id
-        # self.s3_bucket = s3_bucket
+        self.s3_bucket = s3_bucket
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
