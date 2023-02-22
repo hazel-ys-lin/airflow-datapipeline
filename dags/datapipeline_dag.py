@@ -66,6 +66,7 @@ with DAG(
         sql_query="SELECT * FROM user_org;",
         s3_bucket="uvs-data-processing-bucket",
         s3_key="table-csv/user_org.csv",
+        sla=timedelta(seconds=5)  # Set up timeout length
     )
 
 get_tables_task >> tables_from_s3 >> rename_table_from_s3 >> export_task
