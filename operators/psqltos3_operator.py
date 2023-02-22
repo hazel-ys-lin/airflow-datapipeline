@@ -54,14 +54,13 @@ class downloadFromS3Operator(BaseOperator):
         Get table names from S3 and download
     """
 
-    def __init__(self, s3_conn_id: str, s3_bucket: str, s3_key: str, local_path: str,
-                 file_name: str, *args, **kwargs) -> None:
+    def __init__(self, s3_conn_id: str, s3_bucket: str, s3_key: str, local_path: str, *args,
+                 **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.s3_conn_id = s3_conn_id
         self.s3_bucket = s3_bucket
         self.s3_key = s3_key
         self.local_path = local_path
-        self.file_name = file_name
 
     def execute(self, context):
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
