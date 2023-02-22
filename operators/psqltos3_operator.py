@@ -7,6 +7,10 @@ import csv
 import io
 import os
 
+import numpy
+import pandas
+import fastparquet
+
 from airflow.models import BaseOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.decorators import apply_defaults
@@ -100,13 +104,17 @@ class psqlToS3Operator(BaseOperator):
         for i, table in enumerate(table_list):
             table = table.replace(' ', '')
             sql_query = f"SELECT * FROM {table};"
-            s3_key = f"table-csv/{table}.csv"
+            s3_key = f"table-csv/{table}.parquet"
             results = postgres_hook.get_records(sql_query)
 
             data_buffer = io.StringIO()
             csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
             csv_writer.writerows(results)
-            data_buffer_binary = io.BytesIO(data_buffer.getvalue().encode())
+
+            # Covert csv to parquet
+            parquet_file = csv_writer.to_parquet(f"{table}.parquet")
+
+            data_buffer_binary = io.BytesIO(parquet_file.getvalue().encode())
             s3_hook.load_file_obj(
                 file_obj=data_buffer_binary,
                 bucket_name=self.s3_bucket,

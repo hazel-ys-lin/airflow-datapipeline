@@ -47,7 +47,7 @@ with DAG(
         s3_key="table_names.csv",
     )
 
-    tables_from_s3 = downloadFromS3Operator(
+    tables_from_s3_task = downloadFromS3Operator(
         task_id="load_table_names_from_s3",
         s3_conn_id="aws_s3_conn",
         s3_bucket="uvs-data-processing-bucket",
@@ -55,11 +55,11 @@ with DAG(
         local_path="/home/airflow/airflow/data/",
     )
 
-    rename_table_from_s3 = PythonOperator(task_id="rename_file_from_s3",
-                                          python_callable=rename_file,
-                                          op_kwargs={'new_name': 'table_names.txt'})
+    rename_table_from_s3_task = PythonOperator(task_id="rename_file_from_s3",
+                                               python_callable=rename_file,
+                                               op_kwargs={'new_name': 'table_names.txt'})
 
-    export_task = psqlToS3Operator(
+    export_to_s3_task = psqlToS3Operator(
         task_id="psqltos3",
         postgres_conn_id="uvs_postgres_conn",
         s3_conn_id="aws_s3_conn",
@@ -67,4 +67,4 @@ with DAG(
         sla=timedelta(seconds=5)  # Set up timeout length
     )
 
-get_tables_task >> tables_from_s3 >> rename_table_from_s3 >> export_task
+get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task

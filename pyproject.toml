@@ -9,6 +9,7 @@ packages = [{include = "airflow_datapipeline"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 autopep8 = "^2.0.1"
+fastparquet = "^2023.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
