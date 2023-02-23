@@ -122,16 +122,23 @@ class psqlToS3Operator(BaseOperator):
 
             # ------ This part get tables from postgres as
             #        pandas dataframe (for converting purpose) -----
-            s3_key = f"table-parquet/{table}.parquet"
             results = postgres_hook.get_pandas_df(sql_query)
 
-            print('results: ', results, type(results))
+            # print('results: ', results, type(results))
 
-            # ------ This part convert pandas dataframe into parquet ------
-            s3_key = f"table-parquet/{table}.parquet"
+            s3_key_parquet = f"table-parquet/{table}.parquet"
+            s3_key_csv = f"table-csv/{table}.csv"
             aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
-            # ----- This part upload parquet to s3 bucket
+            # ----- This part upload parquet (and csv) to s3 bucket
             wr.s3.to_parquet(df=results,
-                             path=f"s3://{self.s3_bucket}/{s3_key}",
+                             path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
                              boto3_session=aws_s3_hook.get_session())
+            wr.s3.to_csv(
+                df=results,
+                path=f"s3://{self.s3_bucket}/{s3_key_csv}",
+                boto3_session=aws_s3_hook.get_session(),
+                index=False,
+                dataset=True,  # for table headers
+                regular_partitions=True  # for Redshift
+            )
