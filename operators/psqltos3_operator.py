@@ -40,6 +40,8 @@ class psqlGetTablesOperator(BaseOperator):
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
         results = postgres_hook.get_records(self.sql_query)
 
+        print('results: ', results, type(results))
+
         data_buffer = io.StringIO()
         csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
         csv_writer.writerows(results)
