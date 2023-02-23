@@ -136,9 +136,9 @@ class psqlToS3Operator(BaseOperator):
                              boto3_session=aws_s3_hook.get_session())
             wr.s3.to_csv(
                 df=results,
-                path=f"s3://{self.s3_bucket}/table-csv/{table}-",
+                path=f"s3://{self.s3_bucket}/table-csv/{table}.csv",
                 boto3_session=aws_s3_hook.get_session(),
                 index=False,
-                dataset=True,  # for table headers
+                # dataset=True,  # for table headers
                 regular_partitions=True  # for Redshift
             )
