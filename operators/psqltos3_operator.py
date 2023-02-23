@@ -40,8 +40,6 @@ class psqlGetTablesOperator(BaseOperator):
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
         results = postgres_hook.get_records(self.sql_query)
 
-        print('results: ', results, type(results))
-
         data_buffer = io.StringIO()
         csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
         csv_writer.writerows(results)
@@ -126,6 +124,8 @@ class psqlToS3Operator(BaseOperator):
             #        pandas dataframe (for converting purpose) -----
             s3_key = f"table-parquet/{table}.parquet"
             results = postgres_hook.get_pandas_df(sql_query)
+
+            print('results: ', results, type(results))
 
             # ------ This part convert pandas dataframe into parquet ------
             s3_key = f"table-parquet/{table}.parquet"
