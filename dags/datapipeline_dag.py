@@ -80,8 +80,8 @@ with DAG(
 
     create_redshift_tables_task = RedshiftCreateTablesOperator(
         task_id='create_tables_redshift',
-        redshift_conn_id='',
-        redshift_schema='',
+        redshift_conn_id='aws_redshift_conn',
+        # redshift_schema='',
         create_table_statements_path='/home/airflow/airflow/data/uvs_schema.sql',
     )
 

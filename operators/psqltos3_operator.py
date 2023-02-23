@@ -207,11 +207,16 @@ class RedshiftCreateTablesOperator(BaseOperator):
     """
 
     @apply_defaults
-    def __init__(self, redshift_conn_id: str, redshift_schema: str,
-                 create_table_statements_path: str, *args, **kwargs) -> None:
+    def __init__(
+            self,
+            redshift_conn_id: str,
+            #  redshift_schema: str,
+            create_table_statements_path: str,
+            *args,
+            **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.redshift_conn_id = redshift_conn_id
-        self.redshift_schema = redshift_schema
+        # self.redshift_schema = redshift_schema
         self.create_table_statements_path = create_table_statements_path
 
     def execute(self, context):
