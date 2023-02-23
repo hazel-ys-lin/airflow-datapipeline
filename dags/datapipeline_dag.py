@@ -4,6 +4,10 @@
 """
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
@@ -11,6 +15,8 @@ from airflow.operators.python_operator import PythonOperator
 from psqltos3_operator import psqlToS3Operator
 from psqltos3_operator import psqlGetTablesOperator
 from psqltos3_operator import downloadFromS3Operator
+from psqltos3_operator import getPsqlTableSchemaOperator
+from psqltos3_operator import RedshiftCreateTablesOperator
 
 
 def rename_file(ti, new_name: str) -> None:
@@ -23,7 +29,7 @@ with DAG(
         "psqlToS3",
         default_args={
             "depends_on_past": True,
-            "email": ["hazel.ys.lin@viewsonic.com"],
+            "email": [os.getenv('EMAIL_ADDRESS')],
             "email_on_failure": False,
             "email_on_retry": False,
             "retries": 1,
@@ -67,4 +73,16 @@ with DAG(
         sla=timedelta(seconds=5)  # Set up timeout length
     )
 
-get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task
+    extract_schema_task = getPsqlTableSchemaOperator(
+        task_id="extract_schema_from_db",
+        postgres_conn_id="uvs_postgres_conn",
+        output_file="/home/airflow/airflow/data/uvs_schema.sql")
+
+    create_redshift_tables_task = RedshiftCreateTablesOperator(
+        task_id='create_tables_redshift',
+        redshift_conn_id='',
+        redshift_schema='',
+        create_table_statements_path='/home/airflow/airflow/data/uvs_schema.sql',
+    )
+
+get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> create_redshift_tables_task

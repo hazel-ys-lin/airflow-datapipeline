@@ -10,6 +10,7 @@ packages = [{include = "airflow_datapipeline"}]
 python = "^3.8"
 autopep8 = "^2.0.1"
 awswrangler = "^2.19.0"
+python-dotenv = "^0.21.1"
 
 
 [tool.poetry.group.dev.dependencies]
