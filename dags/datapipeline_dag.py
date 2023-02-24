@@ -4,9 +4,9 @@
 """
 
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 from datetime import datetime, timedelta
 from airflow import DAG
@@ -29,7 +29,8 @@ with DAG(
         "psqlToS3",
         default_args={
             "depends_on_past": True,
-            "email": [os.getenv('EMAIL_ADDRESS')],
+            # "email": [os.getenv('EMAIL_ADDRESS')],
+            "email": [],
             "email_on_failure": False,
             "email_on_retry": False,
             "retries": 1,
