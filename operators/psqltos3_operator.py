@@ -8,9 +8,12 @@ import io
 import os
 
 import awswrangler as wr
+from itertools import groupby
 
 from airflow.models import BaseOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.postgres import PostgresOperator
+
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
@@ -160,75 +163,38 @@ def map_postgres_to_redshift_data_type(postgres_data_type):
         raise ValueError(f"Unknown PostgreSQL data type: {postgres_data_type}")
 
 
-class getPsqlTableSchemaOperator(BaseOperator):
+class getPsqlTableSchemaOperator(PostgresOperator):
     """
-        Dump all the schemas from read-replica to sql file
-        and upload it to redshift
+    Operator that extracts the schema of a PostgreSQL database
     """
 
-    def __init__(self, postgres_conn_id: str, output_file: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.postgres_conn_id = postgres_conn_id
-        self.output_file = output_file
+    def __init__(self, postgres_conn_id, schema_filepath, *args, **kwargs):
+        self.schema_filepath = schema_filepath
+        super().__init__(*args, postgres_conn_id=postgres_conn_id, **kwargs)
 
     def execute(self, context):
-        postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
-        conn = postgres_hook.get_conn()
+        schema = self.get_schema()
+        with open(self.schema_filepath, "w", encoding="UTF-8") as f:
+            f.write(schema)
+        return self.schema_filepath
+
+    def get_schema(self):
+        """
+            Returns a SQL script with the schema of the PostgreSQL database
+        """
+        conn = self.get_db_hook().get_conn()
         cursor = conn.cursor()
-
-        # Get a list of all tables in the database
-        cursor.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'"
-        )
-        tables = [row[0] for row in cursor.fetchall()]
-
-        # Get the schema for each table and generate Redshift-compatible CREATE TABLE statements
-        redshift_create_table_statements = []
-        for table in tables:
-            cursor.execute(
-                f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name='{table}'"
-            )
-            schema = [
-                f"{row[0]} {map_postgres_to_redshift_data_type(row[1])}"
-                for row in cursor.fetchall()
-            ]
-            redshift_create_table_statement = f"CREATE TABLE {table} ({', '.join(schema)});"
-            redshift_create_table_statements.append(redshift_create_table_statement)
-
-        # Close the database connection
-        cursor.close()
-        conn.close()
-
-        # Write the Redshift-compatible CREATE TABLE to a file
-        with open(self.output_file, 'w', encoding='UTF-8') as f:
-            f.write('\n'.join(redshift_create_table_statements))
-
-
-# class RedshiftCreateTablesOperator(BaseOperator):
-#     """
-#         Import redshift available schema into redshift
-#     """
-
-#     @apply_defaults
-#     def __init__(
-#             self,
-#             redshift_conn_id: str,
-#             #  redshift_schema: str,
-#             create_table_statements_path: str,
-#             *args,
-#             **kwargs) -> None:
-#         super().__init__(*args, **kwargs)
-#         self.redshift_conn_id = redshift_conn_id
-#         # self.redshift_schema = redshift_schema
-#         self.create_table_statements_path = create_table_statements_path
-
-#     def execute(self, context):
-#         redshift_hook = RedshiftHook(aws_conn_id=self.redshift_conn_id)
-
-#         with open(self.create_table_statements_path, 'r', encoding="UTF-8") as f:
-#             create_table_statements = f.read().split(';')
-
-#         create_table_statements.pop()
-
-#         for create_table_statement in create_table_statements:
-#             redshift_hook.run(create_table_statement, self.redshift_schema)
+        cursor.execute("""
+            SELECT table_name, column_name, data_type
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+            ORDER BY table_name, ordinal_position;
+        """)
+        rows = cursor.fetchall()
+        schema = ""
+        for table, rows in groupby(rows, lambda x: x[0]):
+            schema += f"\nCREATE TABLE {table} (\n"
+            schema += ",\n".join(
+                [f"    {row[1]} {map_postgres_to_redshift_data_type(row[2])}" for row in rows])
+            schema += "\n);"
+        return schema

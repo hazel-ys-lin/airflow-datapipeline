@@ -86,7 +86,7 @@ with DAG(
     extract_schema_task = getPsqlTableSchemaOperator(
         task_id="extract_schema_from_db",
         postgres_conn_id="uvs_postgres_conn",
-        output_file="/home/airflow/airflow/data/uvs_schema.sql")
+        schema_filepath="/home/airflow/airflow/data/uvs_schema.sql")
 
     # create_redshift_tables_task = RedshiftSQLOperator(
     #     task_id='create_tables_redshift',
