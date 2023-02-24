@@ -12,7 +12,6 @@ from itertools import groupby
 
 from airflow.models import BaseOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
@@ -163,38 +162,52 @@ def map_postgres_to_redshift_data_type(postgres_data_type):
         raise ValueError(f"Unknown PostgreSQL data type: {postgres_data_type}")
 
 
-class getPsqlTableSchemaOperator(PostgresOperator):
+class getPsqlTableSchemaOperator(BaseOperator):
     """
-    Operator that extracts the schema of a PostgreSQL database
+        Operator that extracts the schema of a PostgreSQL database
     """
 
-    def __init__(self, postgres_conn_id, schema_filepath, *args, **kwargs):
+    def __init__(self, postgres_conn_id: str, schema_filepath: str, redshift_schema_filepath: str,
+                 *args, **kwargs):
+        self.postgres_conn_id = postgres_conn_id
         self.schema_filepath = schema_filepath
-        super().__init__(*args, postgres_conn_id=postgres_conn_id, **kwargs)
+        self.redshift_schema_filepath = redshift_schema_filepath
+        super().__init__(*args, **kwargs)
 
     def execute(self, context):
-        schema = self.get_schema()
-        with open(self.schema_filepath, "w", encoding="UTF-8") as f:
-            f.write(schema)
-        return self.schema_filepath
-
-    def get_schema(self):
-        """
-            Returns a SQL script with the schema of the PostgreSQL database
-        """
-        conn = self.get_db_hook().get_conn()
+        postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
+        conn = postgres_hook.get_conn()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT table_name, column_name, data_type
+
+        # SQL query to get all table schemas in public schema
+        query = """
+            SELECT table_name,
+                   column_name,
+                   CASE
+                       WHEN data_type = 'integer' THEN 'INTEGER'
+                       WHEN data_type = 'boolean' THEN 'BOOLEAN'
+                       WHEN data_type = 'numeric' THEN 'DECIMAL(' || numeric_precision || ',' || numeric_scale || ')'
+                       WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
+                       WHEN data_type = 'timestamp without time zone' THEN 'TIMESTAMP'
+                       ELSE data_type
+                   END AS data_type,
+                   CASE
+                       WHEN is_nullable = 'YES' THEN 'NULL'
+                       ELSE 'NOT NULL'
+                   END AS is_nullable
             FROM information_schema.columns
-            WHERE table_schema = 'public'
-            ORDER BY table_name, ordinal_position;
-        """)
-        rows = cursor.fetchall()
-        schema = ""
-        for table, rows in groupby(rows, lambda x: x[0]):
-            schema += f"\nCREATE TABLE {table} (\n"
-            schema += ",\n".join(
-                [f"    {row[1]} {map_postgres_to_redshift_data_type(row[2])}" for row in rows])
-            schema += "\n);"
-        return schema
+            WHERE table_schema = 'public';
+        """
+
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # Write results to file in Redshift schema format
+        with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
+            for row in results:
+                f.write(f"{row[0]} {row[2]} {row[3]},\n")
+
+        # Write original schema to file
+        with open(self.schema_filepath, 'w', encoding='UTF-8') as f:
+            for row in results:
+                f.write(f"{row[0]} {row[1]} {row[2]} {row[3]}\n")
