@@ -109,6 +109,9 @@ class psqlToS3Operator(BaseOperator):
             #        pandas dataframe (for converting purpose) -----
             results = postgres_hook.get_pandas_df(sql_query)
 
+            if results.empty:
+                raise ValueError(f"Dataframe for table {table} is empty")
+
             s3_key_parquet = f"table-parquet/{table}.parquet"
             s3_key_csv = f"table-csv/{table}.csv"
             aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)

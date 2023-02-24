@@ -26,6 +26,13 @@ def rename_file(ti, new_name: str) -> None:
     os.rename(src=download_file_name[0], dst=f"{download_file_path}/{new_name}")
 
 
+def handle_failure(context):
+    task_instance = context['task_instance']
+    task_instance.xcom_push(key='failed', value=True)
+    # Mark the task as skipped instead of failed
+    # task_instance.state = State.SKIPPED
+
+
 with DAG(
         "psqlToS3",
         default_args={
@@ -72,7 +79,8 @@ with DAG(
         postgres_conn_id="uvs_postgres_conn",
         s3_conn_id="aws_s3_conn",
         s3_bucket="uvs-data-processing-bucket",
-        sla=timedelta(seconds=5)  # Set up timeout length
+        sla=timedelta(seconds=5),  # Set up timeout length
+        on_failure_callback=handle_failure  # Specify the failure handler function
     )
 
     extract_schema_task = getPsqlTableSchemaOperator(
