@@ -80,10 +80,10 @@ with DAG(
         postgres_conn_id="uvs_postgres_conn",
         output_file="/home/airflow/airflow/data/uvs_schema.sql")
 
-    create_redshift_tables_task = RedshiftSQLOperator(
-        task_id='create_tables_redshift',
-        sql='/home/airflow/airflow/data/uvs_schema.sql',
-    )
+    # create_redshift_tables_task = RedshiftSQLOperator(
+    #     task_id='create_tables_redshift',
+    #     sql='/home/airflow/airflow/data/uvs_schema.sql',
+    # )
     # RedshiftCreateTablesOperator(
     #     task_id='create_tables_redshift',
     #     redshift_conn_id='aws_redshift_conn',
@@ -91,4 +91,5 @@ with DAG(
     #     create_table_statements_path='/home/airflow/airflow/data/uvs_schema.sql',
     # )
 
-get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> create_redshift_tables_task
+get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task
+# >> create_redshift_tables_task
