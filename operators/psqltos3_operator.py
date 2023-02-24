@@ -15,7 +15,7 @@ from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
-from airflow.providers.amazon.aws.hooks.redshift import RedshiftHook
+# from airflow.providers.amazon.aws.hooks.redshift import RedshiftHook
 
 
 class psqlGetTablesOperator(BaseOperator):
@@ -201,31 +201,31 @@ class getPsqlTableSchemaOperator(BaseOperator):
             f.write('\n'.join(redshift_create_table_statements))
 
 
-class RedshiftCreateTablesOperator(BaseOperator):
-    """
-        Import redshift available schema into redshift
-    """
+# class RedshiftCreateTablesOperator(BaseOperator):
+#     """
+#         Import redshift available schema into redshift
+#     """
 
-    @apply_defaults
-    def __init__(
-            self,
-            redshift_conn_id: str,
-            #  redshift_schema: str,
-            create_table_statements_path: str,
-            *args,
-            **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.redshift_conn_id = redshift_conn_id
-        # self.redshift_schema = redshift_schema
-        self.create_table_statements_path = create_table_statements_path
+#     @apply_defaults
+#     def __init__(
+#             self,
+#             redshift_conn_id: str,
+#             #  redshift_schema: str,
+#             create_table_statements_path: str,
+#             *args,
+#             **kwargs) -> None:
+#         super().__init__(*args, **kwargs)
+#         self.redshift_conn_id = redshift_conn_id
+#         # self.redshift_schema = redshift_schema
+#         self.create_table_statements_path = create_table_statements_path
 
-    def execute(self, context):
-        redshift_hook = RedshiftHook(aws_conn_id=self.redshift_conn_id)
+#     def execute(self, context):
+#         redshift_hook = RedshiftHook(aws_conn_id=self.redshift_conn_id)
 
-        with open(self.create_table_statements_path, 'r', encoding="UTF-8") as f:
-            create_table_statements = f.read().split(';')
+#         with open(self.create_table_statements_path, 'r', encoding="UTF-8") as f:
+#             create_table_statements = f.read().split(';')
 
-        create_table_statements.pop()
+#         create_table_statements.pop()
 
-        for create_table_statement in create_table_statements:
-            redshift_hook.run(create_table_statement, self.redshift_schema)
+#         for create_table_statement in create_table_statements:
+#             redshift_hook.run(create_table_statement, self.redshift_schema)
