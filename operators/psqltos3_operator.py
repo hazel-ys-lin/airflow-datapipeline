@@ -12,7 +12,7 @@ from itertools import groupby
 
 from airflow.models import BaseOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.postgres import PostgresOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
