@@ -204,8 +204,10 @@ class GetParquetTableSchemaOperator(BaseOperator):
         Operator that extracts the schema of a parquet file in S3
     """
 
-    def __init__(self, s3_bucket: str, redshift_schema_filepath: str, *args, **kwargs):
+    def __init__(self, s3_conn_id: str, s3_bucket: str, redshift_schema_filepath: str, *args,
+                 **kwargs):
         super().__init__(*args, **kwargs)
+        self.s3_conn_id = s3_conn_id
         self.s3_bucket = s3_bucket
         self.redshift_schema_filepath = redshift_schema_filepath
 
