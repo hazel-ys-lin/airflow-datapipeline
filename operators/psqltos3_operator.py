@@ -249,8 +249,7 @@ class insertRedshiftFromS3Operator(BaseOperator):
                 continue
 
             # generate copy command
-            region = 'eu-central-1'
-            copy_query = f"COPY {table} FROM '{s3_key}' IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}' FORMAT AS PARQUET REGION '{region}';"
+            copy_query = f"COPY {table} FROM '{s3_key}' IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}' FORMAT AS PARQUET;"
 
             try:
                 aws_redshift_hook.run(copy_query)
