@@ -232,21 +232,28 @@ class GetParquetTableSchemaOperator(BaseOperator):
             # Extract the schema using parquet-tools
             output = subprocess.check_output(["parquet-tools", "schema", parquet_file_path])
 
+            redshift_mapping = {
+                "boolean": "BOOLEAN",
+                "int32": "INTEGER",
+                "int64": "INTEGER",
+                "float": "FLOAT",
+                "double": "FLOAT",
+                "binary": "VARCHAR(65535)",
+                "string": "VARCHAR(256)"
+            }
+
             # Write the schema to file in Redshift schema format
             with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
-                column_defs = []
-                for line in output.decode().splitlines():
-                    if line.startswith('-'):
-                        continue
-                    elif line.startswith(' '):
-                        column_defs[-1] += ' ' + line.strip()
-                    else:
-                        column_defs.append(line.strip())
-
-                table_name = os.path.splitext(os.path.basename(s3_key))[0]
-                f.write(f"CREATE TABLE IF NOT EXISTS {table_name} (\n")
-                f.write(",\n".join(column_defs))
-                f.write("\n);\n")
+                f.write(f"CREATE TABLE {table} (\n")
+                for line in output.decode('UTF-8').splitlines()[1:]:
+                    column_name, column_type = line.split(":")[0].strip(), line.split(
+                        ":")[1].strip()
+                    # Map parquet data types to Redshift data types
+                    redshift_type = redshift_mapping.get(column_type, None)
+                    if redshift_type is None:
+                        raise ValueError(f"Unsupported column type: {column_type}")
+                    f.write(f"\t{column_name} {redshift_type},\n")
+                f.write(");\n")
 
 
 class createRedshiftTableOperator(BaseOperator):
