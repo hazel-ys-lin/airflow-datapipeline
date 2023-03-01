@@ -17,6 +17,7 @@ from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
+from airflow.exceptions import AirflowException
 # from airflow.providers.amazon.aws.hooks.redshift import RedshiftHook
 
 
@@ -132,36 +133,6 @@ class psqlToS3Operator(BaseOperator):
             )
 
 
-def map_postgres_to_redshift_data_type(postgres_data_type):
-    """
-        Maps PostgreSQL data types to Redshift data types.
-    """
-    postgres_data_type = postgres_data_type.lower()
-
-    # Define a dictionary that maps PostgreSQL data types to Redshift data types
-    POSTGRES_REDSHIFT_MAP = {
-        'varchar': 'varchar(256)',
-        'character': 'char(256)',
-        'text': 'varchar(max)',
-        'bigint': 'bigint',
-        'integer': 'integer',
-        'smallint': 'smallint',
-        'boolean': 'boolean',
-        'numeric': 'numeric',
-        'timestamp': 'timestamp',
-        'date': 'date'
-    }
-
-    # Extract the data type category (e.g. 'varchar', 'bigint', etc.)
-    data_type_category = postgres_data_type.split('(')[0]
-
-    # Map the data type category to the corresponding Redshift data type
-    if data_type_category in POSTGRES_REDSHIFT_MAP:
-        return POSTGRES_REDSHIFT_MAP[data_type_category]
-    else:
-        raise ValueError(f"Unknown PostgreSQL data type: {postgres_data_type}")
-
-
 class getPsqlTableSchemaOperator(BaseOperator):
     """
         Operator that extracts the schema of a PostgreSQL database
@@ -169,10 +140,10 @@ class getPsqlTableSchemaOperator(BaseOperator):
 
     def __init__(self, postgres_conn_id: str, schema_filepath: str, redshift_schema_filepath: str,
                  *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.schema_filepath = schema_filepath
         self.redshift_schema_filepath = redshift_schema_filepath
-        super().__init__(*args, **kwargs)
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
@@ -211,3 +182,41 @@ class getPsqlTableSchemaOperator(BaseOperator):
         with open(self.schema_filepath, 'w', encoding='UTF-8') as f:
             for row in results:
                 f.write(f"{row[0]} {row[1]} {row[2]} {row[3]}\n")
+
+
+class createRedshiftTableOperator(BaseOperator):
+    """
+        Operator that read the redshift schema sql file to create tables in redshift
+    """
+
+    def __init__(self, redshift_conn_id: str, redshift_schema_filepath: str, *args,
+                 **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.redshift_conn_id = redshift_conn_id
+        self.redshift_schema_filepath = redshift_schema_filepath
+
+    def execute(self, context):
+        aws_redshift_hook = AwsBaseHook(aws_conn_id=self.redshift_conn_id)
+
+        table_names_file = '/home/airflow/airflow/data/table_names.txt'
+        table_names_list = []
+        with open(table_names_file, 'r', encoding='UTF-8') as file:
+            while (line := file.readline().rstrip()):
+                table_names_list.append(line)
+
+        with open(self.redshift_schema_filepath, 'r', encoding='UTF-8') as schema_file:
+            schema_queries = schema_file.read().split(';')
+
+            redshift_conn = aws_redshift_hook.get_conn()
+            redshift_cursor = redshift_conn.cursor()
+            for query in schema_queries:
+                if query.strip() and query.strip().startswith("CREATE TABLE"):
+                    table_name = query.strip().split()[2].strip()
+                    if table_name in table_names_list:
+                        try:
+                            redshift_cursor.execute(query)
+                        except Exception as e:
+                            raise AirflowException(f"Error creating table {table_name}: {e}")
+            redshift_cursor.close()
+            redshift_conn.commit()
+            redshift_conn.close()
