@@ -178,7 +178,7 @@ class getPsqlTableSchemaOperator(BaseOperator):
         # Write results to file in Redshift schema format
         with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
             for row in results:
-                f.write(f"CREATE TABLE {row[0]} ({row[1]} {row[2]} {row[3]},);\n")
+                f.write(f"CREATE TABLE {row[0]} ({row[1]} {row[2]} {row[3]});\n")
 
         # Write original schema to file
         with open(self.schema_filepath, 'w', encoding='UTF-8') as f:
