@@ -15,7 +15,8 @@ from airflow.operators.python_operator import PythonOperator
 from psqltos3_operator import psqlToS3Operator
 from psqltos3_operator import psqlGetTablesOperator
 from psqltos3_operator import downloadFromS3Operator
-from psqltos3_operator import getPsqlTableSchemaOperator
+# from psqltos3_operator import getPsqlTableSchemaOperator
+from psqltos3_operator import GetParquetTableSchemaOperator
 from psqltos3_operator import createRedshiftTableOperator
 from psqltos3_operator import insertRedshiftFromS3Operator
 
@@ -83,10 +84,9 @@ with DAG(
         on_failure_callback=handle_failure  # Specify the failure handler function
     )
 
-    extract_schema_task = getPsqlTableSchemaOperator(
+    extract_schema_task = GetParquetTableSchemaOperator(
         task_id="extract_schema_from_db",
-        postgres_conn_id="uvs_postgres_conn",
-        schema_filepath="/home/airflow/airflow/data/uvs_schema.sql",
+        s3_bucket='uvs-data-processing-bucket',
         redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
 
     create_redshift_tables_task = createRedshiftTableOperator(
