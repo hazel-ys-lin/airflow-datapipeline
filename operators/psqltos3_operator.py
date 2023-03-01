@@ -8,7 +8,11 @@ import io
 import os
 
 import awswrangler as wr
-from itertools import groupby
+# from itertools import groupby
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from airflow.models import BaseOperator
 from airflow.operators.python_operator import PythonOperator
@@ -246,7 +250,7 @@ class insertRedshiftFromS3Operator(BaseOperator):
 
             # generate copy command
             region = 'eu-central-1'
-            copy_query = f"COPY {table} FROM '{s3_key} FORMAT AS PARQUET REGION {region}"
+            copy_query = f"COPY {table} FROM '{s3_key} IAM_ROLE {os.getenv('REDSHIFT_IAM_ROLE')} FORMAT AS PARQUET REGION {region}"
 
             try:
                 aws_redshift_hook.run(copy_query)
