@@ -211,7 +211,7 @@ class GetParquetTableSchemaOperator(BaseOperator):
 
     def execute(self, context):
         # Download the parquet file to a temporary file
-        s3_hook = S3Hook()
+        s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
 
         # load table_names file to get all the table names
         table_file = '/home/airflow/airflow/data/table_names.txt'
