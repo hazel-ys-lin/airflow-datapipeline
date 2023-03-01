@@ -221,7 +221,8 @@ class GetParquetTableSchemaOperator(BaseOperator):
                 table_list.append(line)
 
         for table in table_list:
-            s3_key = f"s3://{self.s3_bucket}/table-parquet/{table}.parquet"
+            # s3_key = f"s3://{self.s3_bucket}/table-parquet/{table}.parquet"
+            s3_key = f"table-parquet/{table}.parquet"
 
             with NamedTemporaryFile(delete=False) as tmp_file:
                 s3_hook.download_file(self.s3_bucket, s3_key, tmp_file.name)
