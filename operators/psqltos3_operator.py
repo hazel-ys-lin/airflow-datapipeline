@@ -225,28 +225,28 @@ class GetParquetTableSchemaOperator(BaseOperator):
         for table in table_list:
             # s3_key = f"s3://{self.s3_bucket}/table-parquet/{table}.parquet"
             s3_key = f"table-parquet/{table}.parquet"
+            parquet_file_path = f"/home/airflow/airflow/data/parquet/{table}.parquet"
 
-            with NamedTemporaryFile(delete=False) as tmp_file:
-                s3_hook.download_file(s3_key, self.s3_bucket, tmp_file.name)
+            s3_hook.download_file(s3_key, self.s3_bucket, parquet_file_path)
 
-                # Extract the schema using parquet-tools
-                output = subprocess.check_output(["parquet-tools", "schema", tmp_file.name])
+            # Extract the schema using parquet-tools
+            output = subprocess.check_output(["parquet-tools", "schema", parquet_file_path])
 
-                # Write the schema to file in Redshift schema format
-                with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
-                    column_defs = []
-                    for line in output.decode().splitlines():
-                        if line.startswith('-'):
-                            continue
-                        elif line.startswith(' '):
-                            column_defs[-1] += ' ' + line.strip()
-                        else:
-                            column_defs.append(line.strip())
+            # Write the schema to file in Redshift schema format
+            with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
+                column_defs = []
+                for line in output.decode().splitlines():
+                    if line.startswith('-'):
+                        continue
+                    elif line.startswith(' '):
+                        column_defs[-1] += ' ' + line.strip()
+                    else:
+                        column_defs.append(line.strip())
 
-                    table_name = os.path.splitext(os.path.basename(s3_key))[0]
-                    f.write(f"CREATE TABLE IF NOT EXISTS {table_name} (\n")
-                    f.write(",\n".join(column_defs))
-                    f.write("\n);\n")
+                table_name = os.path.splitext(os.path.basename(s3_key))[0]
+                f.write(f"CREATE TABLE IF NOT EXISTS {table_name} (\n")
+                f.write(",\n".join(column_defs))
+                f.write("\n);\n")
 
 
 class createRedshiftTableOperator(BaseOperator):
