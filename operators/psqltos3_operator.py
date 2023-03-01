@@ -198,9 +198,17 @@ class createRedshiftTableOperator(BaseOperator):
     def execute(self, context):
         aws_redshift_hook = PostgresHook(postgres_conn_id=self.redshift_conn_id)
 
+        table_names_file = '/home/airflow/airflow/data/table_names.txt'
+        table_names_list = []
+        with open(table_names_file, 'r', encoding='UTF-8') as file:
+            while (line := file.readline().rstrip()):
+                table_names_list.append(line)
+
         with open(self.redshift_schema_filepath, 'r', encoding='UTF-8') as schema_file:
             schema_queries = schema_file.read().split(';')
 
-        for query in schema_queries:
-            if query.strip() != '':
-                aws_redshift_hook.run(query)
+            for query in schema_queries:
+                if query.strip() != "":
+                    create_query = f"CREATE TABLE {query.strip()}"
+                    aws_redshift_hook.run(create_query)
+                    self.log.info(f"Executed {create_query}")
