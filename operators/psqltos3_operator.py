@@ -196,7 +196,9 @@ class createRedshiftTableOperator(BaseOperator):
         self.redshift_schema_filepath = redshift_schema_filepath
 
     def execute(self, context):
-        aws_redshift_hook = AwsBaseHook(aws_conn_id=self.redshift_conn_id, client_type="redshift")
+        aws_redshift_hook = AwsBaseHook(aws_conn_id=self.redshift_conn_id,
+                                        client_type="redshift",
+                                        region_name='eu-central-1')
 
         table_names_file = '/home/airflow/airflow/data/table_names.txt'
         table_names_list = []
