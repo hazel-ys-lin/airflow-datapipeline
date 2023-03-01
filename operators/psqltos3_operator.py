@@ -224,7 +224,6 @@ class GetParquetTableSchemaOperator(BaseOperator):
                 table_list.append(line)
 
         schema_dir = "/home/airflow/airflow/data/parquet_schema"
-        os.makedirs(schema_dir, exist_ok=True)
 
         for table in table_list:
             s3_key = f"table-parquet/{table}.parquet"
