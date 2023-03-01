@@ -211,7 +211,6 @@ class GetParquetTableSchemaOperator(BaseOperator):
         self.s3_conn_id = s3_conn_id
         self.s3_bucket = s3_bucket
         self.redshift_schema_filepath = redshift_schema_filepath
-        self.schema_dir = tempfile.mkdtemp()
 
     def execute(self, context):
         # Download the parquet file to a temporary file
@@ -224,34 +223,38 @@ class GetParquetTableSchemaOperator(BaseOperator):
             while (line := file.readline().rstrip()):
                 table_list.append(line)
 
-        # Extract the schema for each table and write it to a file
-        schema_files = []
+        schema_dir = "/home/airflow/airflow/data/parquet_schema"
+        os.makedirs(schema_dir, exist_ok=True)
 
         for table in table_list:
             s3_key = f"table-parquet/{table}.parquet"
-            local_file_path = os.path.join(self.schema_dir, f"{table}.parquet")
-            s3_hook.download_file(s3_key, self.s3_bucket, local_file_path)
+            parquet_file_path = f"/home/airflow/airflow/data/parquet/{table}.parquet"
+
+            s3_hook.download_file(s3_key, self.s3_bucket, parquet_file_path)
 
             # Extract the schema using parquet-tools
-            output = subprocess.check_output(["parquet-tools", "schema", local_file_path])
+            schema_file_path = os.path.join(schema_dir, f"{table}.sql")
+            with open(schema_file_path, "w") as schema_file:
+                output = subprocess.check_output(["parquet-tools", "schema", parquet_file_path])
+                schema_file.write(output.decode("utf-8"))
 
-            # Write the schema to a file
-            schema_file_path = os.path.join(self.schema_dir, f"{table}.sql")
-            with open(schema_file_path, 'w') as schema_file:
-                schema_file.write(output.decode('UTF-8'))
-            schema_files.append(schema_file_path)
-
-            # Remove temporary parquet file
-            os.remove(local_file_path)
+            # Remove the temporary parquet file
+            os.remove(parquet_file_path)
 
         # Concatenate all the schema files into a single SQL file
-        with open(self.redshift_schema_filepath, 'w') as f:
-            for schema_file in schema_files:
-                with open(schema_file) as s:
-                    f.write(s.read() + '\n')
+        with open(self.redshift_schema_filepath, "w") as sql_file:
+            for table in table_list:
+                schema_file_path = os.path.join(schema_dir, f"{table}.sql")
+                with open(schema_file_path, "r") as schema_file:
+                    schema = schema_file.read()
+                    table_name = table.replace("-", "_")
+                    sql_file.write(f"DROP TABLE IF EXISTS {table_name};\n")
+                    sql_file.write(f"CREATE TABLE IF NOT EXISTS {table_name} (\n")
+                    sql_file.write(schema)
+                    sql_file.write(f");\n")
 
-        # Remove temporary schema files
-        shutil.rmtree(self.schema_dir)
+                # Remove the schema file
+                os.remove(schema_file_path)
 
 
 class createRedshiftTableOperator(BaseOperator):
