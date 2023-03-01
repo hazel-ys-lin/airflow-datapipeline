@@ -8,7 +8,8 @@ import io
 import os
 
 import subprocess
-from tempfile import NamedTemporaryFile
+import tempfile
+import shutil
 
 import awswrangler as wr
 # from itertools import groupby
@@ -201,7 +202,7 @@ class psqlToS3Operator(BaseOperator):
 
 class GetParquetTableSchemaOperator(BaseOperator):
     """
-        Operator that extracts the schema of a parquet file in S3
+        Operator that extracts the schema of parquet files in S3
     """
 
     def __init__(self, s3_conn_id: str, s3_bucket: str, redshift_schema_filepath: str, *args,
@@ -222,8 +223,21 @@ class GetParquetTableSchemaOperator(BaseOperator):
             while (line := file.readline().rstrip()):
                 table_list.append(line)
 
+        # for table in table_list:
+        #     # s3_key = f"s3://{self.s3_bucket}/table-parquet/{table}.parquet"
+        #     s3_key = f"table-parquet/{table}.parquet"
+        #     parquet_file_path = f"/home/airflow/airflow/data/parquet/{table}.parquet"
+
+        #     s3_hook.download_file(s3_key, self.s3_bucket, parquet_file_path)
+
+        #     # Extract the schema using parquet-tools
+        #     output = subprocess.check_output(["parquet-tools", "schema", parquet_file_path])
+
+        # Create a temporary directory to store the table schema files
+        schema_dir = tempfile.mkdtemp()
+
+        # Extract the schema for each table and write it to a file
         for table in table_list:
-            # s3_key = f"s3://{self.s3_bucket}/table-parquet/{table}.parquet"
             s3_key = f"table-parquet/{table}.parquet"
             parquet_file_path = f"/home/airflow/airflow/data/parquet/{table}.parquet"
 
@@ -232,28 +246,20 @@ class GetParquetTableSchemaOperator(BaseOperator):
             # Extract the schema using parquet-tools
             output = subprocess.check_output(["parquet-tools", "schema", parquet_file_path])
 
-            redshift_mapping = {
-                "boolean": "BOOLEAN",
-                "int32": "INTEGER",
-                "int64": "INTEGER",
-                "float": "FLOAT",
-                "double": "FLOAT",
-                "binary": "VARCHAR(65535)",
-                "string": "VARCHAR(256)"
-            }
+            # Write the schema to a file
+            schema_file_path = os.path.join(schema_dir, f"{table}.sql")
+            with open(schema_file_path, 'w') as schema_file:
+                schema_file.write(output.decode('UTF-8'))
 
-            # Write the schema to file in Redshift schema format
-            with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
-                f.write(f"CREATE TABLE {table} (\n")
-                for line in output.decode('UTF-8').splitlines()[1:]:
-                    column_name, column_type = line.split(":")[0].strip(), line.split(
-                        ":")[1].strip()
-                    # Map parquet data types to Redshift data types
-                    redshift_type = redshift_mapping.get(column_type, None)
-                    if redshift_type is None:
-                        raise ValueError(f"Unsupported column type: {column_type}")
-                    f.write(f"\t{column_name} {redshift_type},\n")
-                f.write(");\n")
+        # Concatenate all the schema files into a single SQL file
+        with open(self.redshift_schema_filepath, 'w') as redshift_schema_file:
+            for table in table_list:
+                schema_file_path = os.path.join(schema_dir, f"{table}.sql")
+                with open(schema_file_path, 'r') as schema_file:
+                    redshift_schema_file.write(schema_file.read())
+
+        # Remove the temporary directory
+        shutil.rmtree(schema_dir)
 
 
 class createRedshiftTableOperator(BaseOperator):
