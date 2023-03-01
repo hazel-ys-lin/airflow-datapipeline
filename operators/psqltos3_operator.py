@@ -211,6 +211,6 @@ class createRedshiftTableOperator(BaseOperator):
 
             for query in schema_queries:
                 if query.strip() != "":
-                    create_query = f"CREATE TABLE {query.strip()}"
+                    create_query = f"{query.strip()}"
                     aws_redshift_hook.run(create_query)
                     self.log.info(f"Executed {create_query}")
