@@ -157,23 +157,30 @@ class getPsqlTableSchemaOperator(BaseOperator):
         # SQL query to get all table schemas in public schema
         query = """
             SELECT table_name,
-                column_name,
-                CASE
-                    WHEN data_type = 'integer' THEN 'INTEGER'
-                    WHEN data_type = 'boolean' THEN 'BOOLEAN'
-                    WHEN data_type = 'numeric' THEN 'DECIMAL(' || numeric_precision || ',' || numeric_scale || ')'
-                    WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
-                    WHEN data_type = 'timestamp without time zone' THEN 'TIMESTAMP'
-                    WHEN data_type = 'date' THEN 'DATE'
-                    WHEN data_type = 'time without time zone' THEN 'TIME'
-                    ELSE data_type
-                END AS data_type,
-                CASE
-                    WHEN is_nullable = 'YES' THEN 'NULL'
-                    ELSE 'NOT NULL'
-                END AS is_nullable
-            FROM information_schema.columns
-            WHERE table_schema = 'public';
+                   array_to_string(array_agg(column_def), ',\n') AS columns
+            FROM (
+                SELECT table_name,
+                       column_name || ' ' ||
+                       CASE
+                           WHEN data_type = 'integer' THEN 'INTEGER'
+                           WHEN data_type = 'boolean' THEN 'BOOLEAN'
+                           WHEN data_type = 'numeric' THEN 'DECIMAL(' || numeric_precision || ',' || numeric_scale || ')'
+                           WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
+                           WHEN data_type = 'timestamp without time zone' THEN 'TIMESTAMP'
+                           WHEN data_type = 'date' THEN 'DATE'
+                           WHEN data_type = 'time without time zone' THEN 'TIME'
+                           ELSE data_type
+                       END || ' ' ||
+                       CASE
+                           WHEN is_nullable = 'YES' THEN 'NULL'
+                           ELSE 'NOT NULL'
+                       END AS column_def
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                ORDER BY table_name, ordinal_position
+            ) AS columns_by_table
+            GROUP BY table_name
+            ORDER BY table_name;
         """
 
         cursor.execute(query)
@@ -182,12 +189,12 @@ class getPsqlTableSchemaOperator(BaseOperator):
         # Write results to file in Redshift schema format
         with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
             for row in results:
-                f.write(f"CREATE TABLE IF NOT EXISTS {row[0]} ({row[1]} {row[2]} {row[3]});\n")
+                f.write(f"CREATE TABLE IF NOT EXISTS {row[0]} (\n{row[1]}\n);\n")
 
         # Write original schema to file
         with open(self.schema_filepath, 'w', encoding='UTF-8') as f:
             for row in results:
-                f.write(f"{row[0]} {row[1]} {row[2]} {row[3]}\n")
+                f.write(f"{row[0]}\n{row[1]}\n")
 
 
 class createRedshiftTableOperator(BaseOperator):
@@ -249,7 +256,24 @@ class insertRedshiftFromS3Operator(BaseOperator):
                 continue
 
             # generate copy command
-            copy_query = f"COPY {table} FROM '{s3_key}' IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}' FORMAT AS PARQUET;"
+            copy_query = f"""
+                            TRUNCATE {table};\n\
+                            COPY {table}\n\
+                            FROM '{s3_key}'\n\
+                            IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}'\n\
+                            FORMAT AS PARQUET\n\
+                            TRUNCATECOLUMNS\n\
+                            EMPTYASNULL\n\
+                            ACCEPTINVCHARS\n\
+                            IGNOREBLANKLINES\n\
+                            NULL AS '\\N'\n\
+                            MANIFEST\n\
+                            REMOVEQUOTES\n\
+                            STATUPDATE ON\n\
+                            ESCAPE\n\
+                            ;
+                        """
+            # f"COPY {table} FROM '{s3_key}' IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}' FORMAT AS PARQUET;"
 
             try:
                 aws_redshift_hook.run(copy_query)
