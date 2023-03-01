@@ -225,7 +225,7 @@ class GetParquetTableSchemaOperator(BaseOperator):
             s3_key = f"table-parquet/{table}.parquet"
 
             with NamedTemporaryFile(delete=False) as tmp_file:
-                s3_hook.download_file(self.s3_bucket, s3_key, tmp_file.name)
+                s3_hook.download_file(s3_key, self.s3_bucket, tmp_file.name)
 
                 # Extract the schema using parquet-tools
                 output = subprocess.check_output(["parquet-tools", "schema", tmp_file.name])
