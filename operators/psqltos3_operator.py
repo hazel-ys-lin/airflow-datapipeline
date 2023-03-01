@@ -261,7 +261,7 @@ class insertRedshiftFromS3Operator(BaseOperator):
                             COPY {table}\n\
                             FROM '{s3_key}'\n\
                             IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}'\n\
-                            FORMAT AS PARQUET\n\
+                            FORMAT PARQUET\n\
                             FILLRECORD\n\
                             ;
                         """
