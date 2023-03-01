@@ -17,7 +17,7 @@ from psqltos3_operator import psqlGetTablesOperator
 from psqltos3_operator import downloadFromS3Operator
 from psqltos3_operator import getPsqlTableSchemaOperator
 from psqltos3_operator import createRedshiftTableOperator
-# from airflow.providers.amazon.aws.operators.redshift_sql import RedshiftSQLOperator
+from psqltos3_operator import insertRedshiftFromS3Operator
 
 
 def rename_file(ti, new_name: str) -> None:
@@ -95,4 +95,11 @@ with DAG(
         redshift_schema_filepath='/home/airflow/airflow/data/uvs_redshift_schema.sql',
     )
 
-get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> create_redshift_tables_task
+    load_data_to_redshift_task = insertRedshiftFromS3Operator(
+        task_id='load_data_to_redshift',
+        redshift_conn_id='aws_redshift_conn',
+        s3_conn_id='aws_s3_conn',
+        s3_bucket='processing',
+    )
+
+get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> create_redshift_tables_task >> load_data_to_redshift_task

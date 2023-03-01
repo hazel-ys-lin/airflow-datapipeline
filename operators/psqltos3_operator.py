@@ -214,3 +214,41 @@ class createRedshiftTableOperator(BaseOperator):
                     create_query = f"{query.strip()}"
                     aws_redshift_hook.run(create_query)
                     self.log.info(f"Executed {create_query}")
+
+
+class insertRedshiftFromS3Operator(BaseOperator):
+    """
+        Operator that reads the S3 parquet files to input into redshift
+    """
+
+    def __init__(self, redshift_conn_id: str, s3_conn_id: str, s3_bucket: str, *args,
+                 **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.redshift_conn_id = redshift_conn_id
+        self.s3_conn_id = s3_conn_id
+        self.s3_bucket = s3_bucket
+
+    def execute(self, context):
+        aws_redshift_hook = PostgresHook(postgres_conn_id=self.redshift_conn_id)
+        aws_s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
+
+        table_file = '/home/airflow/airflow/data/table_names.txt'
+        table_list = []
+        with open(table_file, 'r', encoding='UTF-8') as file:
+            while (line := file.readline().rstrip()):
+                table_list.append(line)
+
+        for table in table_list:
+            s3_key = f"s3://{self.s3_bucket}/table-parquet/{table}.parquet"
+
+            if not aws_s3_hook.check_for_key(s3_key):
+                continue
+
+            # generate copy command
+            region = 'eu-central-1'
+            copy_query = f"COPY {table} FROM '{s3_key} FORMAT AS PARQUET REGION {region}"
+
+            try:
+                aws_redshift_hook.run(copy_query)
+            except Exception as e:
+                raise e
