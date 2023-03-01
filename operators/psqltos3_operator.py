@@ -153,19 +153,21 @@ class getPsqlTableSchemaOperator(BaseOperator):
         # SQL query to get all table schemas in public schema
         query = """
             SELECT table_name,
-                   column_name,
-                   CASE
-                       WHEN data_type = 'integer' THEN 'INTEGER'
-                       WHEN data_type = 'boolean' THEN 'BOOLEAN'
-                       WHEN data_type = 'numeric' THEN 'DECIMAL(' || numeric_precision || ',' || numeric_scale || ')'
-                       WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
-                       WHEN data_type = 'timestamp without time zone' THEN 'TIMESTAMP'
-                       ELSE data_type
-                   END AS data_type,
-                   CASE
-                       WHEN is_nullable = 'YES' THEN 'NULL'
-                       ELSE 'NOT NULL'
-                   END AS is_nullable
+                column_name,
+                CASE
+                    WHEN data_type = 'integer' THEN 'INTEGER'
+                    WHEN data_type = 'boolean' THEN 'BOOLEAN'
+                    WHEN data_type = 'numeric' THEN 'DECIMAL(' || numeric_precision || ',' || numeric_scale || ')'
+                    WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
+                    WHEN data_type = 'timestamp without time zone' THEN 'TIMESTAMP'
+                    WHEN data_type = 'date' THEN 'DATE'
+                    WHEN data_type = 'time without time zone' THEN 'TIME'
+                    ELSE data_type
+                END AS data_type,
+                CASE
+                    WHEN is_nullable = 'YES' THEN 'NULL'
+                    ELSE 'NOT NULL'
+                END AS is_nullable
             FROM information_schema.columns
             WHERE table_schema = 'public';
         """
@@ -176,7 +178,7 @@ class getPsqlTableSchemaOperator(BaseOperator):
         # Write results to file in Redshift schema format
         with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
             for row in results:
-                f.write(f"{row[0]} {row[2]} {row[3]},\n")
+                f.write(f"CREATE TABLE {row[0]} ({row[1]} {row[2]} {row[3]},);\n")
 
         # Write original schema to file
         with open(self.schema_filepath, 'w', encoding='UTF-8') as f:
