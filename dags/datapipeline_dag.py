@@ -91,11 +91,11 @@ with DAG(
         s3_bucket='uvs-data-processing-bucket',
         redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
 
-    create_redshift_tables_task = createRedshiftTableOperator(
-        task_id='create_tables_redshift',
-        redshift_conn_id='aws_redshift_conn',
-        redshift_schema_filepath='/home/airflow/airflow/data/uvs_redshift_schema.sql',
-    )
+    # create_redshift_tables_task = createRedshiftTableOperator(
+    #     task_id='create_tables_redshift',
+    #     redshift_conn_id='aws_redshift_conn',
+    #     redshift_schema_filepath='/home/airflow/airflow/data/uvs_redshift_schema.sql',
+    # )
 
     load_data_to_redshift_task = insertRedshiftFromS3Operator(
         task_id='load_data_to_redshift',
@@ -104,4 +104,4 @@ with DAG(
         s3_bucket='uvs-data-processing-bucket',
     )
 
-get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> create_redshift_tables_task >> load_data_to_redshift_task
+get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> load_data_to_redshift_task
