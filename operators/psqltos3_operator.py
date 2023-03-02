@@ -200,6 +200,25 @@ class psqlToS3Operator(BaseOperator):
 #                 f.write(f"{row[0]}\n{row[1]}\n")
 
 
+def get_redshift_table_schema(parquet_schema):
+    redshift_data_types = {
+        'string': 'VARCHAR',
+        'int64': 'BIGINT',
+        'double': 'DOUBLE PRECISION',
+        'float64': 'REAL',
+        'boolean': 'BOOLEAN',
+        'timestamp[ms]': 'TIMESTAMP',
+        'date32[day]': 'DATE',
+        'time32[ms]': 'TIME',
+        'time64[us]': 'TIME',
+        'interval[ms]': 'INTERVAL',
+    }
+    redshift_schema = map(
+        lambda field: f"{field.name} {redshift_data_types.get(str(field.type), 'VARCHAR(256)')}",
+        parquet_schema)
+    return ', '.join(redshift_schema)
+
+
 class GetParquetTableSchemaOperator(BaseOperator):
     """
         Operator that extracts the schema of parquet files in S3
@@ -242,9 +261,9 @@ class GetParquetTableSchemaOperator(BaseOperator):
             parquet_schema = parquet_file.schema
 
             # Create the Redshift table using the extracted schema
-            table_columns = [f"{field.name} {field.type}" for field in parquet_schema]
+            table_columns = get_redshift_table_schema(parquet_schema)
             create_table_query = f"""
-                CREATE TABLE IF NOT EXISTS public.{table} ({', '.join(table_columns)})
+                CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
             """
 
             aws_redshift_hook.run(create_table_query)
