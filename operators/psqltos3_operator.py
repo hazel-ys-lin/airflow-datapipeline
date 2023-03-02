@@ -239,13 +239,12 @@ class GetParquetTableSchemaOperator(BaseOperator):
 
             # Load the Parquet file and extract the schema
             parquet_file = pq.read_table(f"{parquet_dir}/{table}.parquet")
-            parquet_schema = parquet_file.schema.to_json()
+            parquet_schema = parquet_file.schema
 
             # Create the Redshift table using the extracted schema
+            table_columns = [f"{field.name} {field.type}" for field in parquet_schema]
             create_table_query = f"""
-                DROP TABLE {table};
-                CREATE TABLE IF NOT EXISTS public.{table} ({json.loads(parquet_schema)['fields']})
-                SORTKEY ({json.loads(parquet_schema)['primaryKey'][0]});
+                CREATE TABLE IF NOT EXISTS public.{table} ({', '.join(table_columns)})
             """
 
             aws_redshift_hook.run(create_table_query)
