@@ -17,7 +17,7 @@ from psqltos3_operator import psqlGetTablesOperator
 from psqltos3_operator import downloadFromS3Operator
 # from psqltos3_operator import getPsqlTableSchemaOperator
 from psqltos3_operator import GetParquetTableSchemaOperator
-from psqltos3_operator import createRedshiftTableOperator
+# from psqltos3_operator import createRedshiftTableOperator
 from psqltos3_operator import insertRedshiftFromS3Operator
 
 
