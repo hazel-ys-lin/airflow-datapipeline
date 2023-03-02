@@ -87,6 +87,7 @@ with DAG(
     extract_schema_task = GetParquetTableSchemaOperator(
         task_id="extract_schema_from_db",
         s3_conn_id="aws_s3_conn",
+        redshift_conn_id="aws_redshift_conn",
         s3_bucket='uvs-data-processing-bucket',
         redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
 
