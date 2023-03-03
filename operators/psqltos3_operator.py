@@ -9,6 +9,7 @@ import io
 import os
 
 import subprocess
+import pyarrow as pa
 import pyarrow.parquet as pq
 
 import awswrangler as wr
@@ -114,17 +115,6 @@ class psqlToS3Operator(BaseOperator):
         for i, table in enumerate(table_list):
             table = table.replace(' ', '')
 
-            # ------ Get the list of columns in the table ------
-            # redshift_datatype_map = {}
-
-            # ------ Generate the Redshift schema based on the data type of each column ------
-
-            # redshift_schema = []
-
-            # redshift_schema_str = ', '.join(redshift_schema)
-            # with open('/home/airflow/airflow/data/redshift_schema.txt', 'w', encoding='UTF-8') as f:
-            #     f.write(redshift_schema_str)
-
             # ------ get tables from postgres as pandas dataframe (for converting purpose) -----
             sql_query = f"SELECT * FROM {table};"
             results = postgres_hook.get_pandas_df(sql_query)
@@ -137,11 +127,12 @@ class psqlToS3Operator(BaseOperator):
             aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
             # ----- upload parquet (and csv) to s3 bucket
-            wr.s3.to_parquet(df=results,
-                             path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
-                             dataset=True,
-                             regular_partitions=True,
-                             boto3_session=aws_s3_hook.get_session())
+            wr.s3.to_parquet(
+                df=results,
+                path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
+                #  dataset=True,
+                #  regular_partitions=True,
+                boto3_session=aws_s3_hook.get_session())
             # wr.s3.to_csv(
             #     df=results,
             #     path=f"s3://{self.s3_bucket}/{s3_key_csv}",
