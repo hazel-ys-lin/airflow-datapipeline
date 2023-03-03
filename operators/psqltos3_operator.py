@@ -140,6 +140,7 @@ class psqlToS3Operator(BaseOperator):
             wr.s3.to_parquet(df=results,
                              path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
                              dataset=True,
+                             regular_partitions=True,
                              boto3_session=aws_s3_hook.get_session())
             # wr.s3.to_csv(
             #     df=results,
