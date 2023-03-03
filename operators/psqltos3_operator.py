@@ -211,10 +211,10 @@ def get_redshift_table_schema(parquet_schema):
         'date': 'DATE',
         'time': 'TIME',
     }
-    redshift_schema = map(
-        lambda field:
-        f"{field.name} {redshift_data_types.get(str(field.type_code.name), 'VARCHAR(256)')}",
-        parquet_schema)
+    redshift_schema = [
+        f"{field.name} {redshift_data_types.get(field.type.upper(), 'VARCHAR(256)')}"
+        for field in parquet_schema
+    ]
     return ', '.join(redshift_schema)
 
 
