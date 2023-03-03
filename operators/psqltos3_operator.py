@@ -212,7 +212,8 @@ def get_redshift_table_schema(parquet_schema):
         'time': 'TIME',
     }
     redshift_schema = map(
-        lambda field: f"{field.name} {redshift_data_types.get(str(field.type), 'VARCHAR(256)')}",
+        lambda field:
+        f"{field.name} {redshift_data_types.get(str(field.type_code.name), 'VARCHAR(256)')}",
         parquet_schema)
     return ', '.join(redshift_schema)
 
