@@ -202,16 +202,14 @@ class psqlToS3Operator(BaseOperator):
 
 def get_redshift_table_schema(parquet_schema):
     redshift_data_types = {
-        'string': 'VARCHAR',
-        'int64': 'BIGINT',
+        'varchar': 'VARCHAR',
+        'bigint': 'BIGINT',
         'double': 'DOUBLE PRECISION',
-        'float64': 'REAL',
-        'boolean': 'BOOLEAN',
-        'timestamp[ms]': 'TIMESTAMP',
-        'date32[day]': 'DATE',
-        'time32[ms]': 'TIME',
-        'time64[us]': 'TIME',
-        'interval[ms]': 'INTERVAL',
+        'float': 'REAL',
+        'tinyint(1)': 'BOOLEAN',
+        'timestamp': 'TIMESTAMP',
+        'date': 'DATE',
+        'time': 'TIME',
     }
     redshift_schema = map(
         lambda field: f"{field.name} {redshift_data_types.get(str(field.type), 'VARCHAR(256)')}",
