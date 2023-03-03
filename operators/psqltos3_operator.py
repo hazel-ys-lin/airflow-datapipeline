@@ -113,22 +113,33 @@ class psqlToS3Operator(BaseOperator):
         # enumerate all the tables, put table names into sql query
         for i, table in enumerate(table_list):
             table = table.replace(' ', '')
-            sql_query = f"SELECT * FROM {table};"
 
-            # ------ get tables from postgres as
-            #        pandas dataframe (for converting purpose) -----
+            # ------ Get the list of columns in the table ------
+            # redshift_datatype_map = {}
+
+            # ------ Generate the Redshift schema based on the data type of each column ------
+
+            # redshift_schema = []
+
+            # redshift_schema_str = ', '.join(redshift_schema)
+            # with open('/home/airflow/airflow/data/redshift_schema.txt', 'w', encoding='UTF-8') as f:
+            #     f.write(redshift_schema_str)
+
+            # ------ get tables from postgres as pandas dataframe (for converting purpose) -----
+            sql_query = f"SELECT * FROM {table};"
             results = postgres_hook.get_pandas_df(sql_query)
 
             if results.empty:
                 raise ValueError(f"Dataframe for table {table} is empty")
 
             s3_key_parquet = f"table-parquet/{table}.parquet"
-            s3_key_csv = f"table-csv/{table}.csv"
+            # s3_key_csv = f"table-csv/{table}.csv"
             aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
             # ----- upload parquet (and csv) to s3 bucket
             wr.s3.to_parquet(df=results,
                              path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
+                             dataset=True,
                              boto3_session=aws_s3_hook.get_session())
             # wr.s3.to_csv(
             #     df=results,
@@ -138,66 +149,6 @@ class psqlToS3Operator(BaseOperator):
             #     # dataset=True,  # for table headers
             #     regular_partitions=True  # for Redshift
             # )
-
-
-# class getPsqlTableSchemaOperator(BaseOperator):
-#     """
-#         Operator that extracts the schema of a PostgreSQL database
-#     """
-
-#     def __init__(self, postgres_conn_id: str, schema_filepath: str, redshift_schema_filepath: str,
-#                  *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.postgres_conn_id = postgres_conn_id
-#         self.schema_filepath = schema_filepath
-#         self.redshift_schema_filepath = redshift_schema_filepath
-
-#     def execute(self, context):
-#         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
-#         conn = postgres_hook.get_conn()
-#         cursor = conn.cursor()
-
-#         # SQL query to get all table schemas in public schema
-#         query = """
-#             SELECT table_name,
-#                    array_to_string(array_agg(column_def), ',\n') AS columns
-#             FROM (
-#                 SELECT table_name,
-#                        column_name || ' ' ||
-#                        CASE
-#                            WHEN data_type = 'integer' THEN 'INTEGER'
-#                            WHEN data_type = 'boolean' THEN 'BOOLEAN'
-#                            WHEN data_type = 'numeric' THEN 'DECIMAL(' || numeric_precision || ',' || numeric_scale || ')'
-#                            WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
-#                            WHEN data_type = 'timestamp without time zone' THEN 'TIMESTAMP'
-#                            WHEN data_type = 'date' THEN 'DATE'
-#                            WHEN data_type = 'time without time zone' THEN 'TIME'
-#                            ELSE data_type
-#                        END || ' ' ||
-#                        CASE
-#                            WHEN is_nullable = 'YES' THEN 'NULL'
-#                            ELSE 'NOT NULL'
-#                        END AS column_def
-#                 FROM information_schema.columns
-#                 WHERE table_schema = 'public'
-#                 ORDER BY table_name, ordinal_position
-#             ) AS columns_by_table
-#             GROUP BY table_name
-#             ORDER BY table_name;
-#         """
-
-#         cursor.execute(query)
-#         results = cursor.fetchall()
-
-#         # Write results to file in Redshift schema format
-#         with open(self.redshift_schema_filepath, 'w', encoding='UTF-8') as f:
-#             for row in results:
-#                 f.write(f"CREATE TABLE IF NOT EXISTS {row[0]} (\n{row[1]}\n);\n")
-
-#         # Write original schema to file
-#         with open(self.schema_filepath, 'w', encoding='UTF-8') as f:
-#             for row in results:
-#                 f.write(f"{row[0]}\n{row[1]}\n")
 
 
 def get_redshift_table_schema(parquet_schema):
@@ -220,10 +171,7 @@ def get_redshift_table_schema(parquet_schema):
         'TIMESTAMP_MICROS': 'TIMESTAMP',
         'TIMESTAMP_MILLIS': 'TIMESTAMP'
     }
-    # redshift_schema = [
-    #     f"{field.name} {redshift_data_types.get(field.type, 'VARCHAR(256)')}"
-    #     for field in parquet_schema
-    # ]
+
     redshift_schema = []
     for field in parquet_schema:
         redshift_type = redshift_data_types.get(field.type, 'VARCHAR')
@@ -286,35 +234,6 @@ class GetParquetTableSchemaOperator(BaseOperator):
             os.remove(f"{parquet_dir}/{table}.parquet")
 
 
-# class createRedshiftTableOperator(BaseOperator):
-#     """
-#         Operator that read the redshift schema sql file to create tables in redshift
-#     """
-
-#     def __init__(self, redshift_conn_id: str, redshift_schema_filepath: str, *args,
-#                  **kwargs) -> None:
-#         super().__init__(*args, **kwargs)
-#         self.redshift_conn_id = redshift_conn_id
-#         self.redshift_schema_filepath = redshift_schema_filepath
-
-#     def execute(self, context):
-#         aws_redshift_hook = PostgresHook(postgres_conn_id=self.redshift_conn_id)
-
-#         # table_names_file = '/home/airflow/airflow/data/table_names.txt'
-#         # table_names_list = []
-#         # with open(table_names_file, 'r', encoding='UTF-8') as file:
-#         #     while (line := file.readline().rstrip()):
-#         #         table_names_list.append(line)
-
-#         with open(self.redshift_schema_filepath, 'r', encoding='UTF-8') as schema_file:
-#             schema_queries = schema_file.read().split(';')
-
-#             for query in schema_queries:
-#                 if query.strip() != "":
-#                     # create_query = f"{query.strip()}"
-#                     aws_redshift_hook.run(query)
-
-
 class insertRedshiftFromS3Operator(BaseOperator):
     """
         Operator that reads the S3 parquet files to input into redshift
@@ -353,7 +272,6 @@ class insertRedshiftFromS3Operator(BaseOperator):
                             FILLRECORD\n\
                             ;
                         """
-            # f"COPY {table} FROM '{s3_key}' IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}' FORMAT AS PARQUET;"
 
             try:
                 aws_redshift_hook.run(copy_query)
