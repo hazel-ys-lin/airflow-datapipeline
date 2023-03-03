@@ -202,19 +202,35 @@ class psqlToS3Operator(BaseOperator):
 
 def get_redshift_table_schema(parquet_schema):
     redshift_data_types = {
-        'varchar': 'VARCHAR',
-        'bigint': 'BIGINT',
-        'double': 'DOUBLE PRECISION',
-        'float': 'REAL',
-        'tinyint(1)': 'BOOLEAN',
-        'timestamp': 'TIMESTAMP',
-        'date': 'DATE',
-        'time': 'TIME',
+        # 'varchar': 'VARCHAR',
+        # 'bigint': 'BIGINT',
+        # 'double': 'DOUBLE PRECISION',
+        # 'float': 'REAL',
+        # 'tinyint(1)': 'BOOLEAN',
+        # 'timestamp': 'TIMESTAMP',
+        # 'date': 'DATE',
+        # 'time': 'TIME',
+        'BOOLEAN': 'BOOLEAN',
+        'INT32': 'INTEGER',
+        'INT64': 'BIGINT',
+        'FLOAT': 'REAL',
+        'DOUBLE': 'DOUBLE PRECISION',
+        'STRING': 'VARCHAR',
+        'DATE': 'DATE',
+        'TIMESTAMP_MICROS': 'TIMESTAMP',
+        'TIMESTAMP_MILLIS': 'TIMESTAMP'
     }
-    redshift_schema = [
-        f"{field.name} {redshift_data_types.get(field.type, 'VARCHAR(256)')}"
-        for field in parquet_schema
-    ]
+    # redshift_schema = [
+    #     f"{field.name} {redshift_data_types.get(field.type, 'VARCHAR(256)')}"
+    #     for field in parquet_schema
+    # ]
+    redshift_schema = []
+    for field in parquet_schema:
+        redshift_type = redshift_data_types.get(field.type, 'VARCHAR')
+        if redshift_type == 'VARCHAR':
+            redshift_type += '(256)'
+        redshift_schema.append(f"{field.name} {redshift_type}")
+
     return ', '.join(redshift_schema)
 
 
