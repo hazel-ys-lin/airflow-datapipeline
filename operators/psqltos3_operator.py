@@ -228,15 +228,16 @@ class GetParquetTableSchemaOperator(BaseOperator):
             print('after convert to redshift datatype: ', table_columns)
 
             # FIXME: Pass the tables which containe too long data just for now
-            if table == "avatar" or table == "bidata" or table == "space_editor":
+            if table in ["avatar", "bidata", "space_editor"]:
                 continue
-            create_table_query = f"""
-                CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
-            """
+            else:
+                create_table_query = f"""
+                    CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
+                """
 
-            aws_redshift_hook.run(create_table_query)
+                aws_redshift_hook.run(create_table_query)
 
-            os.remove(f"{parquet_dir}/{table}.parquet")
+                os.remove(f"{parquet_dir}/{table}.parquet")
 
 
 class insertRedshiftFromS3Operator(BaseOperator):
