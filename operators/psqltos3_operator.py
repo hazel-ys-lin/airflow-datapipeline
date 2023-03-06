@@ -85,19 +85,21 @@ class downloadFromS3Operator(BaseOperator):
 
 
 def get_dataframe_schema(dataframe: pd.DataFrame) -> List[pa.Field]:
-    fields = []
-    for col_name, dtype in dataframe.dtypes.iteritems():
-        if dtype == "object":
-            fields.append(pa.field(col_name, pa.string()))
-        elif dtype == "datetime64[ns]":
-            fields.append(pa.field(col_name, pa.timestamp("ns")))
-        elif dtype == "float64":
-            fields.append(pa.field(col_name, pa.float64()))
-        elif dtype == "int64":
-            fields.append(pa.field(col_name, pa.int64()))
-        elif dtype == "bool":
-            fields.append(pa.field(col_name, pa.bool_()))
-    return fields
+    schema_list = []
+    for column in dataframe.columns:
+        column_type = dataframe[column].dtype
+        if column_type == 'int64':
+            field = pa.field(column, pa.int64())
+        elif column_type == 'float64':
+            field = pa.field(column, pa.float64())
+        elif column_type == 'bool':
+            field = pa.field(column, pa.bool_())
+        elif column_type == 'object':
+            field = pa.field(column, pa.string())
+        else:
+            raise TypeError(f"Data type not supported: {column_type}")
+        schema_list.append(field)
+    return pa.schema(schema_list)
 
 
 def convert_dataframe_to_parquet(dataframe: pd.DataFrame, schema: List[pa.Field], path: str):
