@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from airflow.models import BaseOperator
-# from airflow.operators.python_operator import PythonOperator
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
@@ -42,9 +41,6 @@ class psqlGetTablesOperator(BaseOperator):
         self.s3_key = s3_key
 
     def execute(self, context):
-        # table_list = []
-        # for i, table_name in enumerate(results):
-        #     table_list.append(table_name[0])
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
         results = postgres_hook.get_records(self.sql_query)
@@ -138,27 +134,9 @@ class psqlToS3Operator(BaseOperator):
                              dataset=False,
                              boto3_session=aws_s3_hook.get_session())
 
-            # s3_key_csv = f"table-csv/{table}.csv"
-            # wr.s3.to_csv(
-            #     df=results,
-            #     path=f"s3://{self.s3_bucket}/{s3_key_csv}",
-            #     boto3_session=aws_s3_hook.get_session(),
-            #     index=False,
-            #     # dataset=True,  # for table headers
-            #     regular_partitions=True  # for Redshift
-            # )
-
 
 def get_redshift_table_schema(parquet_schema):
     redshift_data_types = {
-        # 'varchar': 'VARCHAR',
-        # 'bigint': 'BIGINT',
-        # 'double': 'DOUBLE PRECISION',
-        # 'float': 'REAL',
-        # 'tinyint(1)': 'BOOLEAN',
-        # 'timestamp': 'TIMESTAMP',
-        # 'date': 'DATE',
-        # 'time': 'TIME',
         'BOOL': 'BOOLEAN',
         'INT32': 'INTEGER',
         'INT64': 'BIGINT',
@@ -207,7 +185,6 @@ class GetParquetTableSchemaOperator(BaseOperator):
                 table_list.append(line)
 
         parquet_dir = "/home/airflow/airflow/data/parquet"
-        # parquet_schema_dir = "/home/airflow/airflow/data/parquet_schema"
 
         # Download the parquet file from S3 to local storage
         for table in table_list:
@@ -221,11 +198,11 @@ class GetParquetTableSchemaOperator(BaseOperator):
             # Load the Parquet file and extract the schema
             parquet_file = pq.read_table(f"{parquet_dir}/{table}.parquet")
             parquet_schema = parquet_file.schema
-            print('parquet_file: ', parquet_file)
+            # print('parquet_file: ', parquet_file)
 
             # Create the Redshift table using the extracted schema
             table_columns = get_redshift_table_schema(parquet_schema)
-            print('after convert to redshift datatype: ', table_columns)
+            # print('after convert to redshift datatype: ', table_columns)
 
             create_table_query = f"""
                 CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
@@ -264,6 +241,7 @@ class insertRedshiftFromS3Operator(BaseOperator):
             if not aws_s3_hook.check_for_key(s3_key):
                 continue
 
+            # FIXME: Pass the tables which containe too long data just for now
             if table in ["avatar", "bidata", "space_editor", "lti_platform_record"]:
                 continue
             else:

@@ -9,14 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from airflow import DAG
-# from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from psqltos3_operator import psqlToS3Operator
 from psqltos3_operator import psqlGetTablesOperator
 from psqltos3_operator import downloadFromS3Operator
-# from psqltos3_operator import getPsqlTableSchemaOperator
 from psqltos3_operator import GetParquetTableSchemaOperator
-# from psqltos3_operator import createRedshiftTableOperator
 from psqltos3_operator import insertRedshiftFromS3Operator
 
 
@@ -90,12 +87,6 @@ with DAG(
         redshift_conn_id="aws_redshift_conn",
         s3_bucket='uvs-data-processing-bucket',
         redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
-
-    # create_redshift_tables_task = createRedshiftTableOperator(
-    #     task_id='create_tables_redshift',
-    #     redshift_conn_id='aws_redshift_conn',
-    #     redshift_schema_filepath='/home/airflow/airflow/data/uvs_redshift_schema.sql',
-    # )
 
     load_data_to_redshift_task = insertRedshiftFromS3Operator(
         task_id='load_data_to_redshift',
