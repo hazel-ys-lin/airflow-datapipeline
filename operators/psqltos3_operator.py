@@ -119,24 +119,6 @@ class psqlToS3Operator(BaseOperator):
             if results.empty:
                 raise ValueError(f"Dataframe for table {table} is empty")
 
-            # Get the schema of each table & each column
-            # fields = []
-            # for column_name, data_type in results.dtypes.iteritems():
-            #     if data_type == "object":
-            #         fields.append(pa.field(column_name, pa.string()))
-            #     elif data_type == "datetime64[ns]":
-            #         fields.append(pa.field(column_name, pa.timestamp("ns")))
-            #     elif data_type == "float64":
-            #         fields.append(pa.field(column_name, pa.float64()))
-            #     elif data_type == "bool":
-            #         fields.append(pa.field(column_name, pa.bool_()))
-            # parquet_schema = pa.schema(fields)
-            # print('parquet_schema: ', parquet_schema)
-            # print('typeof result: ', type(results))
-            # print('result dataframe: ', results)
-            # new_results = pd.DataFrame(results)
-            # print('typeof new_results: ', type(new_results))
-
             schema_dict = {}
             for column_name, data_type in results.dtypes.iteritems():
                 if data_type == "object":
@@ -147,9 +129,6 @@ class psqlToS3Operator(BaseOperator):
                     schema_dict[column_name] = 'double'
                 elif data_type == "bool":
                     schema_dict[column_name] = 'boolean'
-
-            # Convert pandas dataframe to pyarrow table
-            # pa_table = pa.Table.from_pandas(df=results, schema=schema_dict, preserve_index=False)
 
             # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
