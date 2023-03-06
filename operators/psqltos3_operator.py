@@ -132,10 +132,11 @@ class psqlToS3Operator(BaseOperator):
                     fields.append(pa.field(column_name, pa.bool_()))
             parquet_schema = pa.schema(fields)
             print('parquet_schema: ', parquet_schema)
+            print('typeof result: ', type(results))
             print('result dataframe: ', results)
 
             # Convert pandas dataframe to pyarrow table
-            pa_table = pa.Table.from_pandas(results, schema=parquet_schema, preserve_index=False)
+            pa_table = pa.Table.from_pandas(df=results, schema=parquet_schema, preserve_index=False)
 
             # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
