@@ -84,31 +84,6 @@ class downloadFromS3Operator(BaseOperator):
         return file_name
 
 
-def get_dataframe_schema(dataframe: pd.DataFrame) -> List[pa.Field]:
-    schema_list = []
-    for column in dataframe.columns:
-        column_type = dataframe[column].dtype
-        if column_type == 'int64':
-            field = pa.field(column, pa.int64())
-        elif column_type == 'float64':
-            field = pa.field(column, pa.float64())
-        elif column_type == 'bool':
-            field = pa.field(column, pa.bool_())
-        elif column_type == 'object':
-            field = pa.field(column, pa.string())
-        else:
-            raise TypeError(f"Data type not supported: {column_type}")
-        schema_list.append(field)
-    return pa.schema(schema_list)
-
-
-def convert_dataframe_to_parquet(dataframe: pd.DataFrame, schema: List[pa.Field], path: str):
-    table = pa.Table.from_pandas(dataframe, schema=schema, preserve_index=False)
-    with pa.OSFile(path, 'wb') as f:
-        with pa.parquet.ParquetWriter(f, table.schema) as writer:
-            writer.write_table(table)
-
-
 class psqlToS3Operator(BaseOperator):
     """
         Export data from psql and upload it to s3
@@ -144,26 +119,23 @@ class psqlToS3Operator(BaseOperator):
             if results.empty:
                 raise ValueError(f"Dataframe for table {table} is empty")
 
-            # TODO: to get the schema of each table & each column
-            schema = get_dataframe_schema(results)
-            parquet_path = f"/home/airflow/airflow/data/parquet/{table}.parquet"
-            convert_dataframe_to_parquet(results, schema, parquet_path)
+            # Get the schema of each table & each column
+            pa_schema = pa.Schema.from_pandas(results)
 
+            # Convert pandas dataframe to pyarrow table
+            pa_table = pa.Table.from_pandas(results, schema=pa_schema, preserve_index=False)
+
+            # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
             # s3_key_csv = f"table-csv/{table}.csv"
             aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
             # ----- upload parquet (and csv) to s3 bucket
-            wr.s3.to_parquet(
-                df=parquet_path,
-                path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
-                schema=schema,
-                index=False,
-                dataset=True,
-                # regular_partitions=True,
-                partition_cols=None,
-                mode="append",
-                boto3_session=aws_s3_hook.get_session())
+            wr.s3.to_parquet(df=pa_table,
+                             path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
+                             dataset=True,
+                             mode="overwrite",
+                             boto3_session=aws_s3_hook.get_session())
             # wr.s3.to_csv(
             #     df=results,
             #     path=f"s3://{self.s3_bucket}/{s3_key_csv}",
