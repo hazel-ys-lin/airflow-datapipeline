@@ -159,7 +159,7 @@ def get_redshift_table_schema(parquet_schema):
         # 'timestamp': 'TIMESTAMP',
         # 'date': 'DATE',
         # 'time': 'TIME',
-        'BOOLEAN': 'BOOLEAN',
+        'BOOL': 'BOOLEAN',
         'INT32': 'INTEGER',
         'INT64': 'BIGINT',
         'FLOAT': 'REAL',
