@@ -220,6 +220,7 @@ class GetParquetTableSchemaOperator(BaseOperator):
             # Load the Parquet file and extract the schema
             parquet_file = pq.read_table(f"{parquet_dir}/{table}.parquet")
             parquet_schema = parquet_file.schema
+            print('parquet_file: ', parquet_file)
 
             # Create the Redshift table using the extracted schema
             table_columns = get_redshift_table_schema(parquet_schema)
