@@ -172,7 +172,7 @@ def get_redshift_table_schema(parquet_schema):
 
     redshift_schema = []
     for field in parquet_schema:
-        redshift_type = redshift_data_types.get(field.type, 'VARCHAR')
+        redshift_type = redshift_data_types.get(str(field.type).upper(), 'VARCHAR')
         if redshift_type == 'VARCHAR':
             redshift_type += '(256)'
         redshift_schema.append(f"{field.name} {redshift_type}")
