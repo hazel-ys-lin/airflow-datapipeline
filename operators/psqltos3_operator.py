@@ -131,6 +131,8 @@ class psqlToS3Operator(BaseOperator):
                 elif data_type == "bool":
                     fields.append(pa.field(column_name, pa.bool_()))
             parquet_schema = pa.schema(fields)
+            print('fields: ', fields)
+            print('result dataframe: ', results)
 
             # Convert pandas dataframe to pyarrow table
             pa_table = pa.Table.from_pandas(results, schema=parquet_schema, preserve_index=False)
