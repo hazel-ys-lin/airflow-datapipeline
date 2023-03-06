@@ -120,7 +120,22 @@ class psqlToS3Operator(BaseOperator):
                 raise ValueError(f"Dataframe for table {table} is empty")
 
             # Get the schema of each table & each column
-            pa_schema = pa.Schema.from_pandas(results)
+            fields = []
+            for column in results.columns:
+                dtype = str(results[column].dtype)
+                if 'object' in dtype:
+                    dtype = pa.string()
+                elif 'int' in dtype:
+                    dtype = pa.int64()
+                elif 'float' in dtype:
+                    dtype = pa.float64()
+                elif 'bool' in dtype:
+                    dtype = pa.bool_()
+                else:
+                    dtype = pa.string()
+                field = pa.field(column, dtype)
+                fields.append(field)
+            pa_schema = pa.schema(fields)
 
             # Convert pandas dataframe to pyarrow table
             pa_table = pa.Table.from_pandas(results, schema=pa_schema, preserve_index=False)
