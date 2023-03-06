@@ -227,17 +227,13 @@ class GetParquetTableSchemaOperator(BaseOperator):
             table_columns = get_redshift_table_schema(parquet_schema)
             print('after convert to redshift datatype: ', table_columns)
 
-            # FIXME: Pass the tables which containe too long data just for now
-            if table in ["avatar", "bidata", "space_editor"]:
-                continue
-            else:
-                create_table_query = f"""
-                    CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
-                """
+            create_table_query = f"""
+                CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
+            """
 
-                aws_redshift_hook.run(create_table_query)
+            aws_redshift_hook.run(create_table_query)
 
-                os.remove(f"{parquet_dir}/{table}.parquet")
+            os.remove(f"{parquet_dir}/{table}.parquet")
 
 
 class insertRedshiftFromS3Operator(BaseOperator):
@@ -268,18 +264,21 @@ class insertRedshiftFromS3Operator(BaseOperator):
             if not aws_s3_hook.check_for_key(s3_key):
                 continue
 
-            # generate copy command
-            copy_query = f"""
-                            TRUNCATE {table};\n\
-                            COPY {table}\n\
-                            FROM '{s3_key}'\n\
-                            IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}'\n\
-                            FORMAT AS PARQUET\n\
-                            FILLRECORD\n\
-                            ;
-                        """
+            if table in ["avatar", "bidata", "space_editor"]:
+                continue
+            else:
+                # generate copy command
+                copy_query = f"""
+                                TRUNCATE {table};\n\
+                                COPY {table}\n\
+                                FROM '{s3_key}'\n\
+                                IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}'\n\
+                                FORMAT AS PARQUET\n\
+                                FILLRECORD\n\
+                                ;
+                            """
 
-            try:
-                aws_redshift_hook.run(copy_query)
-            except Exception as e:
-                raise e
+                try:
+                    aws_redshift_hook.run(copy_query)
+                except Exception as e:
+                    raise e
