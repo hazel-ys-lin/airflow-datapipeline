@@ -134,7 +134,7 @@ class psqlToS3Operator(BaseOperator):
             print('parquet_schema: ', parquet_schema)
             print('typeof result: ', type(results))
             print('result dataframe: ', results)
-            new_results = pd.DataFrame(results).set_index('Index')
+            new_results = pd.DataFrame(results)
             print('typeof new_results: ', type(new_results))
 
             # Convert pandas dataframe to pyarrow table
