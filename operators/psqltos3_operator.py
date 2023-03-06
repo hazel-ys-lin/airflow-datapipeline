@@ -264,7 +264,7 @@ class insertRedshiftFromS3Operator(BaseOperator):
             if not aws_s3_hook.check_for_key(s3_key):
                 continue
 
-            if table in ["avatar", "bidata", "space_editor"]:
+            if table in ["avatar", "bidata", "space_editor", "lti_platform_record"]:
                 continue
             else:
                 # generate copy command
