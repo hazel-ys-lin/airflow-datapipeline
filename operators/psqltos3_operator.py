@@ -99,7 +99,7 @@ class psqlToS3Operator(BaseOperator):
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
-        # s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
+        aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
         # load table_names file to get all the table names
         table_file = '/home/airflow/airflow/data/table_names.txt'
@@ -112,7 +112,7 @@ class psqlToS3Operator(BaseOperator):
         for i, table in enumerate(table_list):
             table = table.replace(' ', '')
 
-            # ------ get tables from postgres as pandas dataframe (for converting purpose) -----
+            # Get tables from postgres as pandas dataframe (for converting purpose)
             sql_query = f"SELECT * FROM {table};"
             results = postgres_hook.get_pandas_df(sql_query)
 
@@ -121,36 +121,28 @@ class psqlToS3Operator(BaseOperator):
 
             # Get the schema of each table & each column
             fields = []
-            for column in results.columns:
-                dtype = str(results[column].dtype)
-                if 'object' in dtype:
-                    dtype = pa.string()
-                elif 'int' in dtype:
-                    dtype = pa.int64()
-                elif 'float' in dtype:
-                    dtype = pa.float64()
-                elif 'bool' in dtype:
-                    dtype = pa.bool_()
-                else:
-                    dtype = pa.string()
-                field = pa.field(column, dtype)
-                fields.append(field)
-            pa_schema = pa.schema(fields)
+            for column_name, data_type in results.dtypes.iteritems():
+                if data_type == "object":
+                    fields.append(pa.field(column_name, pa.string()))
+                elif data_type == "datetime64[ns]":
+                    fields.append(pa.field(column_name, pa.timestamp("ns")))
+                elif data_type == "float64":
+                    fields.append(pa.field(column_name, pa.float64()))
+                elif data_type == "bool":
+                    fields.append(pa.field(column_name, pa.bool_()))
+            parquet_schema = pa.schema(fields)
 
             # Convert pandas dataframe to pyarrow table
-            pa_table = pa.Table.from_pandas(results, schema=pa_schema, preserve_index=False)
+            pa_table = pa.Table.from_pandas(results, schema=parquet_schema, preserve_index=False)
 
             # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
-            # s3_key_csv = f"table-csv/{table}.csv"
-            aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
-
-            # ----- upload parquet (and csv) to s3 bucket
             wr.s3.to_parquet(df=pa_table,
                              path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
                              dataset=True,
-                             mode="overwrite",
                              boto3_session=aws_s3_hook.get_session())
+
+            # s3_key_csv = f"table-csv/{table}.csv"
             # wr.s3.to_csv(
             #     df=results,
             #     path=f"s3://{self.s3_bucket}/{s3_key_csv}",
