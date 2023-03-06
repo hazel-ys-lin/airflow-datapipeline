@@ -165,6 +165,7 @@ def get_redshift_table_schema(parquet_schema):
         'FLOAT': 'REAL',
         'DOUBLE': 'DOUBLE PRECISION',
         'STRING': 'VARCHAR',
+        'TEXT': 'VARCHAR(65535)',
         'DATE': 'DATE',
         'TIMESTAMP_MICROS': 'TIMESTAMP',
         'TIMESTAMP_MILLIS': 'TIMESTAMP'
