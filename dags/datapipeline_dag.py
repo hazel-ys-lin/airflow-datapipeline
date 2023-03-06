@@ -2,15 +2,14 @@
     DAG to set the workflow of
     processing data
 """
-
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+# from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from psqltos3_operator import psqlToS3Operator
 from psqltos3_operator import psqlGetTablesOperator
@@ -57,8 +56,9 @@ with DAG(
         task_id="get_psql_tables",
         postgres_conn_id="uvs_postgres_conn",
         s3_conn_id="aws_s3_conn",
-        sql_query=
-        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';",
+        sql_query="""
+            SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';
+        """,
         s3_bucket="uvs-data-processing-bucket",
         s3_key="table_names.csv",
     )
@@ -84,12 +84,12 @@ with DAG(
         on_failure_callback=handle_failure  # Specify the failure handler function
     )
 
-    extract_schema_task = GetParquetTableSchemaOperator(
-        task_id="extract_schema_from_db",
-        s3_conn_id="aws_s3_conn",
-        redshift_conn_id="aws_redshift_conn",
-        s3_bucket='uvs-data-processing-bucket',
-        redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
+    # extract_schema_task = GetParquetTableSchemaOperator(
+    #     task_id="extract_schema_from_db",
+    #     s3_conn_id="aws_s3_conn",
+    #     redshift_conn_id="aws_redshift_conn",
+    #     s3_bucket='uvs-data-processing-bucket',
+    #     redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
 
     # create_redshift_tables_task = createRedshiftTableOperator(
     #     task_id='create_tables_redshift',
@@ -97,11 +97,12 @@ with DAG(
     #     redshift_schema_filepath='/home/airflow/airflow/data/uvs_redshift_schema.sql',
     # )
 
-    load_data_to_redshift_task = insertRedshiftFromS3Operator(
-        task_id='load_data_to_redshift',
-        redshift_conn_id='aws_redshift_conn',
-        s3_conn_id='aws_s3_conn',
-        s3_bucket='uvs-data-processing-bucket',
-    )
+    # load_data_to_redshift_task = insertRedshiftFromS3Operator(
+    #     task_id='load_data_to_redshift',
+    #     redshift_conn_id='aws_redshift_conn',
+    #     s3_conn_id='aws_s3_conn',
+    #     s3_bucket='uvs-data-processing-bucket',
+    # )
 
-get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> load_data_to_redshift_task
+get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task
+# >> extract_schema_task >> load_data_to_redshift_task

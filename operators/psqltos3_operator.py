@@ -4,29 +4,26 @@
 """
 
 import csv
-import json
 import io
 import os
 
-import subprocess
+from typing import List
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 import awswrangler as wr
-# from itertools import groupby
-
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from airflow.models import BaseOperator
-from airflow.operators.python_operator import PythonOperator
+# from airflow.operators.python_operator import PythonOperator
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
-from airflow.exceptions import AirflowException
+# from airflow.exceptions import AirflowException
 
 
 class psqlGetTablesOperator(BaseOperator):
@@ -87,6 +84,29 @@ class downloadFromS3Operator(BaseOperator):
         return file_name
 
 
+def get_dataframe_schema(dataframe: pd.DataFrame) -> List[pa.Field]:
+    fields = []
+    for col_name, dtype in dataframe.dtypes.iteritems():
+        if dtype == "object":
+            fields.append(pa.field(col_name, pa.string()))
+        elif dtype == "datetime64[ns]":
+            fields.append(pa.field(col_name, pa.timestamp("ns")))
+        elif dtype == "float64":
+            fields.append(pa.field(col_name, pa.float64()))
+        elif dtype == "int64":
+            fields.append(pa.field(col_name, pa.int64()))
+        elif dtype == "bool":
+            fields.append(pa.field(col_name, pa.bool_()))
+    return fields
+
+
+def convert_dataframe_to_parquet(dataframe: pd.DataFrame, schema: List[pa.Field], path: str):
+    table = pa.Table.from_pandas(dataframe, schema=schema, preserve_index=False)
+    with pa.OSFile(path, 'wb') as f:
+        with pa.parquet.ParquetWriter(f, table.schema) as writer:
+            writer.write_table(table)
+
+
 class psqlToS3Operator(BaseOperator):
     """
         Export data from psql and upload it to s3
@@ -122,16 +142,25 @@ class psqlToS3Operator(BaseOperator):
             if results.empty:
                 raise ValueError(f"Dataframe for table {table} is empty")
 
+            # TODO: to get the schema of each table & each column
+            schema = get_dataframe_schema(results)
+            parquet_path = f"/home/airflow/airflow/data/parquet/{table}.parquet"
+            convert_dataframe_to_parquet(results, schema, parquet_path)
+
             s3_key_parquet = f"table-parquet/{table}.parquet"
             # s3_key_csv = f"table-csv/{table}.csv"
             aws_s3_hook = AwsBaseHook(aws_conn_id=self.s3_conn_id)
 
             # ----- upload parquet (and csv) to s3 bucket
             wr.s3.to_parquet(
-                df=results,
+                df=parquet_path,
                 path=f"s3://{self.s3_bucket}/{s3_key_parquet}",
-                #  dataset=True,
-                #  regular_partitions=True,
+                schema=schema,
+                index=False,
+                dataset=True,
+                # regular_partitions=True,
+                partition_cols=None,
+                mode="append",
                 boto3_session=aws_s3_hook.get_session())
             # wr.s3.to_csv(
             #     df=results,
