@@ -138,7 +138,7 @@ class psqlToS3Operator(BaseOperator):
                 column_name: schema_map[str(data_type)]
                 for column_name, data_type in results.dtypes.items()
             }
-            print('********** ', table, ' ********** schema_dict: ', schema_dict)
+            # print('********** ', table, ' ********** schema_dict: ', schema_dict)
 
             # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
@@ -228,7 +228,7 @@ class GetParquetTableSchemaOperator(BaseOperator):
 
             # Create the Redshift table using the extracted schema
             table_columns = get_redshift_table_schema(parquet_schema)
-            print('********** ', table, ' ********** redshift_table_columns: ', table_columns)
+            # print('********** ', table, ' ********** redshift_table_columns: ', table_columns)
             # print('after convert to redshift datatype: ', table_columns)
 
             create_table_query = f"""
