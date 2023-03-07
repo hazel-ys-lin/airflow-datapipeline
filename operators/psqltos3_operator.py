@@ -228,6 +228,7 @@ class GetParquetTableSchemaOperator(BaseOperator):
 
             # Create the Redshift table using the extracted schema
             table_columns = get_redshift_table_schema(parquet_schema)
+            print('********** ', table, ' ********** redshift_table_columns: ', table_columns)
             # print('after convert to redshift datatype: ', table_columns)
 
             create_table_query = f"""
