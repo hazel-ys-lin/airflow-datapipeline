@@ -136,8 +136,9 @@ class psqlToS3Operator(BaseOperator):
 
             schema_dict = {
                 column_name: schema_map[str(data_type)]
-                for column_name, data_type in results.dtypes.iteritems()
+                for column_name, data_type in results.dtypes.items()
             }
+            print('********** ', table, ' ********** schema_dict: ', schema_dict)
 
             # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
