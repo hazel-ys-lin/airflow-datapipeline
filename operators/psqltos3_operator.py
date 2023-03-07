@@ -116,7 +116,6 @@ class psqlToS3Operator(BaseOperator):
                 "object": "STRING",
                 "datetime64[ns]": "TIMESTAMP",
                 "timedelta64": "INTERVAL",
-                "int32": "INTEGER",
                 "int64": "BIGINT",
                 "float64": "DOUBLE",
                 "bool": "BOOLEAN"
@@ -163,6 +162,7 @@ def get_redshift_table_schema(parquet_schema):
         'BOOL': 'BOOLEAN',
         'INT32': 'INTEGER',
         'INTEGER': 'INTEGER',
+        'BIGINT': 'BIGINT',
         'INT64': 'BIGINT',
         'FLOAT': 'REAL',
         'DOUBLE': 'DOUBLE PRECISION',
