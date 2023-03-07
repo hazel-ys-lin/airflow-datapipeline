@@ -121,23 +121,23 @@ class psqlToS3Operator(BaseOperator):
                 "bool": "BOOLEAN"
             }
 
-            schema_dict = {}
-            for column_name, data_type in results.dtypes.iteritems():
-                if data_type == "object":
-                    schema_dict[column_name] = 'string'
-                elif data_type == "datetime64[ns]":
-                    schema_dict[column_name] = 'timestamp'
-                elif data_type == "float64":
-                    schema_dict[column_name] = 'double'
-                elif data_type == "bool":
-                    schema_dict[column_name] = 'boolean'
-                else:
-                    print('*************** data_type in for loop: ', data_type)
+            # schema_dict = {}
+            # for column_name, data_type in results.dtypes.iteritems():
+            #     if data_type == "object":
+            #         schema_dict[column_name] = 'string'
+            #     elif data_type == "datetime64[ns]":
+            #         schema_dict[column_name] = 'timestamp'
+            #     elif data_type == "float64":
+            #         schema_dict[column_name] = 'double'
+            #     elif data_type == "bool":
+            #         schema_dict[column_name] = 'boolean'
+            #     else:
+            #         print('*************** data_type in for loop: ', data_type)
 
-            # schema_dict = {
-            #     column_name: schema_map[str(data_type)]
-            #     for column_name, data_type in results.dtypes.iteritems()
-            # }
+            schema_dict = {
+                column_name: schema_map[str(data_type)]
+                for column_name, data_type in results.dtypes.iteritems()
+            }
 
             # Upload parquet to s3 bucket with schema include
             s3_key_parquet = f"table-parquet/{table}.parquet"
