@@ -113,11 +113,11 @@ class psqlToS3Operator(BaseOperator):
                 raise ValueError(f"Dataframe for table {table} is empty")
 
             schema_map = {
-                "object": "string",
-                "datetime64[ns]": "TIMESTAMP_MILLIS",
-                "timedelta64": "INT64",
-                "int64": "INT64",
-                "float64": "FLOAT64",
+                "object": "STRING",
+                "datetime64[ns]": "TIMESTAMP",
+                "timedelta64": "INTERVAL",
+                "int64": "BIGINT",
+                "float64": "DOUBLE",
                 "bool": "BOOLEAN"
             }
 
@@ -162,6 +162,7 @@ def get_redshift_table_schema(parquet_schema):
         'INT64': 'BIGINT',
         'FLOAT': 'REAL',
         'DOUBLE': 'DOUBLE PRECISION',
+        'INTERVAL': 'INTERVAL',
         'STRING': 'VARCHAR',
         'TEXT': 'VARCHAR(65535)',
         'DATE': 'DATE',
