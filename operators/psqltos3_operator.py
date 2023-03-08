@@ -19,28 +19,33 @@ from airflow.utils.decorators import apply_defaults
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
+
 # from airflow.exceptions import AirflowException
 
 
+# TODO: Add error handlers to each class
 class psqlGetTablesOperator(BaseOperator):
     """
         Get all the table names in PostgresQL database
         and upload it to S3
     """
 
-    def __init__(self, postgres_conn_id: str, s3_conn_id: str, sql_query: str, s3_bucket: str,
-                 s3_key: str, *args, **kwargs) -> None:
+    def __init__(self, postgres_conn_id: str, s3_conn_id: str, s3_bucket: str, s3_key: str, *args,
+                 **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.postgres_conn_id = postgres_conn_id
         self.s3_conn_id = s3_conn_id
-        self.sql_query = sql_query
         self.s3_bucket = s3_bucket
         self.s3_key = s3_key
 
     def execute(self, context):
         postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
         s3_hook = S3Hook(aws_conn_id=self.s3_conn_id)
-        results = postgres_hook.get_records(self.sql_query)
+
+        sql_query = """
+            SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';
+        """
+        results = postgres_hook.get_records(sql_query)
 
         data_buffer = io.StringIO()
         csv_writer = csv.writer(data_buffer, lineterminator=os.linesep)
@@ -267,22 +272,22 @@ class insertRedshiftFromS3Operator(BaseOperator):
             if not aws_s3_hook.check_for_key(s3_key):
                 continue
 
-            # FIXME: Pass the tables which containe too long data just for now
+            # FIXME: Pass the tables which contain too long data just for now
             if table in ["avatar", "bidata", "space_editor", "lti_platform_record"]:
                 continue
-            else:
-                # generate copy command
-                copy_query = f"""
-                                TRUNCATE {table};\n\
-                                COPY {table}\n\
-                                FROM '{s3_key}'\n\
-                                IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}'\n\
-                                FORMAT AS PARQUET\n\
-                                FILLRECORD\n\
-                                ;
-                            """
 
-                try:
-                    aws_redshift_hook.run(copy_query)
-                except Exception as e:
-                    raise e
+            # generate copy command
+            copy_query = f"""
+                            TRUNCATE {table};\n\
+                            COPY {table}\n\
+                            FROM '{s3_key}'\n\
+                            IAM_ROLE '{os.getenv('REDSHIFT_IAM_ROLE')}'\n\
+                            FORMAT AS PARQUET\n\
+                            FILLRECORD\n\
+                            ;
+                        """
+
+            try:
+                aws_redshift_hook.run(copy_query)
+            except Exception as e:
+                raise e

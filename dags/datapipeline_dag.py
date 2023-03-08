@@ -49,28 +49,24 @@ with DAG(
         catchup=False,
         tags=["dataPipeline"],
 ) as dag:
-    get_tables_task = psqlGetTablesOperator(
-        task_id="get_psql_tables",
-        postgres_conn_id="uvs_postgres_conn",
-        s3_conn_id="aws_s3_conn",
-        sql_query="""
-            SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';
-        """,
-        s3_bucket="uvs-data-processing-bucket",
-        s3_key="table_names.csv",
-    )
+    get_tables_task = psqlGetTablesOperator(task_id="get_psql_tables",
+                                            postgres_conn_id="uvs_postgres_conn",
+                                            s3_conn_id="aws_s3_conn",
+                                            s3_bucket="uvs-data-processing-bucket",
+                                            s3_key="table_names.csv",
+                                            on_failure_callback=handle_failure)
 
-    tables_from_s3_task = downloadFromS3Operator(
-        task_id="load_table_names_from_s3",
-        s3_conn_id="aws_s3_conn",
-        s3_bucket="uvs-data-processing-bucket",
-        s3_key="table_names.csv",
-        local_path="/home/airflow/airflow/data/",
-    )
+    tables_from_s3_task = downloadFromS3Operator(task_id="load_table_names_from_s3",
+                                                 s3_conn_id="aws_s3_conn",
+                                                 s3_bucket="uvs-data-processing-bucket",
+                                                 s3_key="table_names.csv",
+                                                 local_path="/home/airflow/airflow/data/",
+                                                 on_failure_callback=handle_failure)
 
     rename_table_from_s3_task = PythonOperator(task_id="rename_file_from_s3",
                                                python_callable=rename_file,
-                                               op_kwargs={'new_name': 'table_names.txt'})
+                                               op_kwargs={'new_name': 'table_names.txt'},
+                                               on_failure_callback=handle_failure)
 
     export_to_s3_task = psqlToS3Operator(
         task_id="psqltos3",
@@ -86,13 +82,14 @@ with DAG(
         s3_conn_id="aws_s3_conn",
         redshift_conn_id="aws_redshift_conn",
         s3_bucket='uvs-data-processing-bucket',
-        redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql")
+        redshift_schema_filepath="/home/airflow/airflow/data/uvs_redshift_schema.sql",
+        on_failure_callback=handle_failure)
 
     load_data_to_redshift_task = insertRedshiftFromS3Operator(
         task_id='load_data_to_redshift',
         redshift_conn_id='aws_redshift_conn',
         s3_conn_id='aws_s3_conn',
         s3_bucket='uvs-data-processing-bucket',
-    )
+        on_failure_callback=handle_failure)
 
 get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> load_data_to_redshift_task
