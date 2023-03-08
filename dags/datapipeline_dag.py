@@ -42,7 +42,7 @@ with DAG(
             "retry_delay": timedelta(minutes=5),
         },
         description="PostgresQL to S3",
-        schedule=timedelta(hours=12),
+        # schedule=timedelta(hours=12),
         schedule_interval='@daily',
         # schedule_interval=None,
         start_date=datetime(2023, 2, 21),
