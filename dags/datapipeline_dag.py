@@ -47,7 +47,7 @@ with DAG(
         # schedule_interval='@daily',
         schedule_interval='00 09 * * *',
         # schedule_interval=None,
-        start_date=pendulum.datetime(2023, 2, 21, tz="Asia/Taipei"),
+        start_date=pendulum.datetime(2023, 3, 9, tz="Asia/Taipei"),
         catchup=False,
         tags=["dataPipeline"],
 ) as dag:
