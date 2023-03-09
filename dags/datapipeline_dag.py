@@ -3,6 +3,7 @@
     processing data
 """
 from datetime import datetime, timedelta
+import pendulum
 import os
 from dotenv import load_dotenv
 
@@ -46,7 +47,7 @@ with DAG(
         # schedule_interval='@daily',
         schedule_interval='00 09 * * *',
         # schedule_interval=None,
-        start_date=datetime(2023, 2, 21),
+        start_date=pendulum.datetime(2023, 2, 21, tz="Asia/Taipei"),
         catchup=False,
         tags=["dataPipeline"],
 ) as dag:
