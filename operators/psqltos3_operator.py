@@ -237,7 +237,7 @@ class GetParquetTableSchemaOperator(BaseOperator):
             # print('after convert to redshift datatype: ', table_columns)
 
             create_table_query = f"""
-                DROP TABLE public.{table};
+                DROP TABLE IF EXISTS public.{table};
                 CREATE TABLE IF NOT EXISTS public.{table} ({table_columns})
             """
 
