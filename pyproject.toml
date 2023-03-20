@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "airflow-datapipeline"
+version = "0.1.0"
+description = ""
+authors = ["hazel-ys-lin <hazel.ys.lin@gmail.com>"]
+readme = "README.md"
+packages = [{include = "airflow_datapipeline"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+autopep8 = "^2.0.1"
+awswrangler = "^2.19.0"
+python-dotenv = "^0.21.1"
+
+
+[tool.poetry.group.dev.dependencies]
+yapf = "^0.32.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
