@@ -42,12 +42,11 @@ with DAG(
             "retries": 1,
             "retry_delay": timedelta(minutes=5),
         },
-        description="PostgresQL to S3",
+        description="PostgreSQL to S3",
         # schedule=timedelta(hours=12),
-        # schedule_interval='@daily',
         schedule_interval='00 09 * * *',
         # schedule_interval=None,
-        start_date=pendulum.datetime(2023, 3, 9, tz="Asia/Taipei"),
+        start_date=pendulum.datetime(2023, 2, 21, tz="Asia/Taipei"),
         catchup=False,
         tags=["dataPipeline"],
 ) as dag:
@@ -95,3 +94,4 @@ with DAG(
         on_failure_callback=handle_failure)
 
 get_tables_task >> tables_from_s3_task >> rename_table_from_s3_task >> export_to_s3_task >> extract_schema_task >> load_data_to_redshift_task
+
